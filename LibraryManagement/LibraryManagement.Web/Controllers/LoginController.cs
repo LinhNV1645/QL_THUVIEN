@@ -1,14 +1,12 @@
-using LibraryManagement.Infrastructure.Persistence;
+using LibraryManagement.Application.Interfaces;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
-using BCrypt.Net;
 
 namespace LibraryManagement.Web.Controllers;
 
-public class LoginController(AppDbContext db) : Controller
+public class LoginController(ITaiKhoanRepository taiKhoanRepo) : Controller
 {
     [HttpGet]
     public IActionResult Index(string? returnUrl = null)
@@ -23,24 +21,18 @@ public class LoginController(AppDbContext db) : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Index(string tenDangNhap, string matKhau, string? returnUrl = null)
     {
-        var tk = await db.TaiKhoans
-            .Include(t => t.VaiTro)
-            .FirstOrDefaultAsync(t => t.TenDangNhap == tenDangNhap && t.TrangThai == 1);
-
-        if (tk == null || !BCrypt.Net.BCrypt.Verify(matKhau, tk.MatKhau))
+        var tk = await taiKhoanRepo.XacThucAsync(tenDangNhap, matKhau);
+        if (tk == null)
         {
             ModelState.AddModelError("", "Tên đăng nhập hoặc mật khẩu không đúng.");
+            ViewBag.ReturnUrl = returnUrl;
             return View();
         }
-
-        // Cập nhật lần đăng nhập cuối
-        tk.LanDangNhapCuoi = DateTime.Now;
-        await db.SaveChangesAsync();
 
         var claims = new List<Claim> {
             new(ClaimTypes.NameIdentifier, tk.MaTaiKhoan.ToString()),
             new(ClaimTypes.Name,           tk.HoTen),
-            new(ClaimTypes.Role,           tk.VaiTro.TenVaiTro),
+            new(ClaimTypes.Role,           tk.TenVaiTro),
             new("TenDangNhap",             tk.TenDangNhap)
         };
 
@@ -50,7 +42,7 @@ public class LoginController(AppDbContext db) : Controller
         await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal,
             new AuthenticationProperties { IsPersistent = true });
 
-        return LocalRedirect(returnUrl ?? "/");
+        return Url.IsLocalUrl(returnUrl) ? LocalRedirect(returnUrl) : RedirectToAction("Index", "Home");
     }
 
     [HttpPost]

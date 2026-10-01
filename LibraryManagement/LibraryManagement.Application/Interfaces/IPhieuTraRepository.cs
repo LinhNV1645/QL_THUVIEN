@@ -4,6 +4,7 @@ public interface IPhieuTraRepository {
     Task<TraSachResultDto> TraSachAsync(TraSachDto dto);
     Task<PhieuTraDto?> GetByIdAsync(int maPhieuTra);
     Task<PhieuTraDto?> GetByPhieuMuonAsync(int maPhieuMuon);
+    Task<IEnumerable<PhieuTraDto>> GetAllAsync(int top = 200);
     Task<IEnumerable<PhieuTraDto>> GetChuaThuPhatAsync();
     Task ThuPhatAsync(int maPhieuTra);
 }

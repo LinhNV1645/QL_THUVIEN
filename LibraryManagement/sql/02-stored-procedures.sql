@@ -1,4 +1,4 @@
--- ============================================================
+﻿-- ============================================================
 -- STORED PROCEDURES — QuanLyThuVien
 -- ============================================================
 
@@ -13,7 +13,8 @@ CREATE OR ALTER PROCEDURE sp_LapPhieuMuon
     @DanhSachSach   NVARCHAR(MAX),  -- JSON: [{"MaSach":1,"SoLuong":1},...]
     @NhanVienLap    INT,
     @MaPhieuMuon    INT OUTPUT,
-    @ThoiDiemLap    DATETIME2 = NULL
+    @ThoiDiemLap    DATETIME2 = NULL,
+    @GhiChu         NVARCHAR(500) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -29,15 +30,26 @@ BEGIN
         IF NOT EXISTS (SELECT 1 FROM DocGia WHERE MaDocGia = @MaDocGia AND TrangThai = 1)
             THROW 50001, N'Độc giả không tồn tại hoặc đã bị khóa.', 1;
 
-        -- Kiểm tra số sách đang mượn
-        SELECT @SoDangMuon = ISNULL(COUNT(*), 0)
+        -- Danh sách sách trong request
+        IF NOT EXISTS (SELECT 1 FROM OPENJSON(@DanhSachSach))
+            THROW 50004, N'Phiếu mượn phải có ít nhất một cuốn sách.', 1;
+
+        IF EXISTS (
+            SELECT 1 FROM OPENJSON(@DanhSachSach)
+                WITH (MaSach INT '$.MaSach', SoLuong INT '$.SoLuong') j
+            WHERE j.SoLuong IS NULL OR j.SoLuong <= 0
+               OR NOT EXISTS (SELECT 1 FROM Sach s WHERE s.MaSach = j.MaSach)
+        )
+            THROW 50005, N'Danh sách sách không hợp lệ (sách không tồn tại hoặc số lượng <= 0).', 1;
+
+        -- Số sách đang mượn (kể cả phiếu đã gia hạn hoặc quá hạn chưa trả)
+        SELECT @SoDangMuon = ISNULL(SUM(ct.SoLuongMuon), 0)
         FROM CTPhieuMuon ct
         JOIN PhieuMuon pm ON ct.MaPhieuMuon = pm.MaPhieuMuon
-        WHERE pm.MaDocGia = @MaDocGia AND pm.TrangThai IN (1, 4) AND ct.TrangThaiCT = 1;
+        WHERE pm.MaDocGia = @MaDocGia AND pm.TrangThai IN (1, 3, 4) AND ct.TrangThaiCT = 1;
 
-        -- Đếm sách trong request
         DECLARE @SoSachMuon INT;
-        SELECT @SoSachMuon = COUNT(*) FROM OPENJSON(@DanhSachSach)
+        SELECT @SoSachMuon = ISNULL(SUM(SoLuong), 0) FROM OPENJSON(@DanhSachSach)
             WITH (MaSach INT '$.MaSach', SoLuong INT '$.SoLuong');
 
         IF (@SoDangMuon + @SoSachMuon) > @SoSachToiDa
@@ -54,8 +66,8 @@ BEGIN
 
         -- Tạo phiếu mượn
         DECLARE @NgayMuon DATE = CAST(ISNULL(@ThoiDiemLap, GETDATE()) AS DATE);
-        INSERT INTO PhieuMuon (MaDocGia, NgayMuon, NgayHanTra, TrangThai, NhanVienLap)
-        VALUES (@MaDocGia, @NgayMuon, DATEADD(DAY, @SoNgayMuon, @NgayMuon), 1, @NhanVienLap);
+        INSERT INTO PhieuMuon (MaDocGia, NgayMuon, NgayHanTra, TrangThai, GhiChu, NhanVienLap)
+        VALUES (@MaDocGia, @NgayMuon, DATEADD(DAY, @SoNgayMuon, @NgayMuon), 1, @GhiChu, @NhanVienLap);
 
         SET @MaPhieuMuon = SCOPE_IDENTITY();
 
@@ -323,8 +335,8 @@ BEGIN
         (SELECT COUNT(*) FROM Sach WHERE TrangThai = 1)                         AS TongDauSach,
         (SELECT SUM(SoLuongTon) FROM Sach WHERE TrangThai = 1)                  AS TongSachTon,
         (SELECT COUNT(*) FROM DocGia WHERE TrangThai = 1)                       AS TongDocGia,
-        (SELECT COUNT(*) FROM PhieuMuon WHERE TrangThai IN (1,4))               AS DangMuon,
-        (SELECT COUNT(*) FROM PhieuMuon WHERE TrangThai = 1
+        (SELECT COUNT(*) FROM PhieuMuon WHERE TrangThai IN (1,3,4))             AS DangMuon,
+        (SELECT COUNT(*) FROM PhieuMuon WHERE TrangThai IN (1,3,4)
             AND NgayHanTra < CAST(GETDATE() AS DATE))                           AS QuaHan,
         (SELECT ISNULL(SUM(TienPhat),0) FROM PhieuTra WHERE DaThuPhat = 0)      AS TienPhatChuaThu,
         (SELECT COUNT(*) FROM PhieuMuon

@@ -1,11 +1,8 @@
 using LibraryManagement.Application.DTOs.Sach;
-using LibraryManagement.Application.Common;
 using LibraryManagement.Application.Interfaces;
-using LibraryManagement.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
 
 namespace LibraryManagement.Web.Controllers;
 
@@ -14,13 +11,13 @@ public class SachController : Controller
 {
     private readonly ISachRepository _sachRepo;
     private readonly IQrService _qrService;
-    private readonly AppDbContext _db;
+    private readonly IDanhMucRepository _danhMucRepo;
 
-    public SachController(ISachRepository sachRepo, IQrService qrService, AppDbContext db)
+    public SachController(ISachRepository sachRepo, IQrService qrService, IDanhMucRepository danhMucRepo)
     {
         _sachRepo = sachRepo;
         _qrService = qrService;
-        _db = db;
+        _danhMucRepo = danhMucRepo;
     }
 
     public async Task<IActionResult> Index(SachFilterDto filter)
@@ -74,6 +71,7 @@ public class SachController : Controller
             MaNXB = sach.MaNXB,
             TenSach = sach.TenSach,
             NamXuatBan = sach.NamXuatBan,
+            SoTrang = sach.SoTrang,
             SoLuongNhap = sach.SoLuongNhap,
             ViTri = sach.ViTri,
             MoTa = sach.MoTa
@@ -137,14 +135,8 @@ public class SachController : Controller
 
     private async Task LoadDropdownsAsync()
     {
-        ViewBag.TheLoais = new SelectList(
-            await _db.TheLoais.OrderBy(t => t.TenTheLoai).ToListAsync(),
-            "MaTheLoai", "TenTheLoai");
-        ViewBag.TacGias = new SelectList(
-            await _db.TacGias.OrderBy(t => t.TenTacGia).ToListAsync(),
-            "MaTacGia", "TenTacGia");
-        ViewBag.NhaXuatBans = new SelectList(
-            await _db.NhaXuatBans.OrderBy(n => n.TenNXB).ToListAsync(),
-            "MaNXB", "TenNXB");
+        ViewBag.TheLoais    = new SelectList(await _danhMucRepo.GetTheLoaisAsync(), "Id", "Ten");
+        ViewBag.TacGias     = new SelectList(await _danhMucRepo.GetTacGiasAsync(), "Id", "Ten");
+        ViewBag.NhaXuatBans = new SelectList(await _danhMucRepo.GetNhaXuatBansAsync(), "Id", "Ten");
     }
 }

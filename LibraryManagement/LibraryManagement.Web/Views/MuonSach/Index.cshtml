@@ -99,9 +99,9 @@
                             <td>
                                 @{
                                     var (badgeClass, icon) = p.TrangThai switch {
-                                        1 => ("success", "bi-arrow-bar-right"),
                                         2 => ("secondary", "bi-check2-circle"),
-                                        3 => ("danger", "bi-exclamation-triangle"),
+                                        _ when p.SoNgayTreHan > 0 => ("danger", "bi-exclamation-triangle"),
+                                        1 => ("success", "bi-arrow-bar-right"),
                                         4 => ("warning text-dark", "bi-clock-history"),
                                         _ => ("light text-dark", "bi-question-circle")
                                     };
@@ -117,9 +117,16 @@
                             <td class="text-center">@p.SoSachMuon</td>
                             <td class="text-end pe-3">
                                 <a asp-action="Detail" asp-route-id="@p.MaPhieuMuon"
-                                   class="btn btn-outline-primary btn-sm">
+                                   class="btn btn-outline-primary btn-sm" title="Chi tiết">
                                     <i class="bi bi-eye"></i>
                                 </a>
+                                @if (p.TrangThai != 2)
+                                {
+                                    <a asp-controller="TraSach" asp-action="LapPhieu" asp-route-maPhieuMuon="@p.MaPhieuMuon"
+                                       class="btn btn-outline-success btn-sm" title="Trả sách">
+                                        <i class="bi bi-arrow-bar-left"></i>
+                                    </a>
+                                }
                             </td>
                         </tr>
                         stt++;
@@ -141,7 +148,9 @@
                         <a class="page-link" asp-action="Index"
                            asp-route-page="@(Model.Page-1)"
                            asp-route-trangThai="@filter.TrangThai"
-                           asp-route-maDocGia="@filter.MaDocGia">‹</a>
+                           asp-route-maDocGia="@filter.MaDocGia"
+                           asp-route-tuNgay="@filter.TuNgay?.ToString("yyyy-MM-dd")"
+                           asp-route-denNgay="@filter.DenNgay?.ToString("yyyy-MM-dd")">‹</a>
                     </li>
                     @for (int i = Math.Max(1, Model.Page - 2); i <= Math.Min(Model.TotalPages, Model.Page + 2); i++)
                     {
@@ -149,14 +158,18 @@
                             <a class="page-link" asp-action="Index"
                                asp-route-page="@i"
                                asp-route-trangThai="@filter.TrangThai"
-                               asp-route-maDocGia="@filter.MaDocGia">@i</a>
+                               asp-route-maDocGia="@filter.MaDocGia"
+                           asp-route-tuNgay="@filter.TuNgay?.ToString("yyyy-MM-dd")"
+                           asp-route-denNgay="@filter.DenNgay?.ToString("yyyy-MM-dd")">@i</a>
                         </li>
                     }
                     <li class="page-item @(!Model.HasNext ? "disabled" : "")">
                         <a class="page-link" asp-action="Index"
                            asp-route-page="@(Model.Page+1)"
                            asp-route-trangThai="@filter.TrangThai"
-                           asp-route-maDocGia="@filter.MaDocGia">›</a>
+                           asp-route-maDocGia="@filter.MaDocGia"
+                           asp-route-tuNgay="@filter.TuNgay?.ToString("yyyy-MM-dd")"
+                           asp-route-denNgay="@filter.DenNgay?.ToString("yyyy-MM-dd")">›</a>
                     </li>
                 </ul>
             </nav>

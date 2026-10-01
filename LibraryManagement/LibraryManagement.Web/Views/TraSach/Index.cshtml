@@ -2,8 +2,8 @@
 @using LibraryManagement.Application.DTOs.TraSach
 @{
     ViewData["Title"] = "Quản lý trả sách";
-    var chuaThuPhat = ViewBag.ChuaThuPhat as IEnumerable<PhieuTraDto> ?? Model;
-    var daThuPhat = Model.Where(p => p.DaThuPhat).ToList();
+    var chuaThuPhat = Model.Where(p => !p.DaThuPhat && p.TienPhat > 0).ToList();
+    var daThuPhat = Model.Where(p => p.DaThuPhat || p.TienPhat == 0).ToList();
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -12,21 +12,6 @@
         <i class="bi bi-plus-lg me-1"></i>Lập phiếu trả
     </a>
 </div>
-
-@if (TempData["Success"] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show py-2">
-        <i class="bi bi-check-circle me-1"></i>@TempData["Success"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
-@if (TempData["Error"] != null)
-{
-    <div class="alert alert-danger alert-dismissible fade show py-2">
-        <i class="bi bi-exclamation-triangle me-1"></i>@TempData["Error"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
 
 <!-- Tabs -->
 <ul class="nav nav-tabs mb-3" id="traSachTab">
@@ -41,7 +26,7 @@
     </li>
     <li class="nav-item">
         <button class="nav-link" data-bs-toggle="tab" data-bs-target="#daThuPhat">
-            Đã thu phạt <span class="badge bg-secondary ms-1">@daThuPhat.Count</span>
+            Đã hoàn tất <span class="badge bg-secondary ms-1">@daThuPhat.Count</span>
         </button>
     </li>
 </ul>

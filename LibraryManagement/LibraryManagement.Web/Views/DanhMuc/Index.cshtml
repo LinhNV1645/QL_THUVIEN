@@ -1,26 +1,11 @@
 @{
     ViewData["Title"] = "Danh mục";
-    var theLoais    = ViewBag.TheLoais    as List<TheLoai>    ?? new();
-    var tacGias     = ViewBag.TacGias     as List<TacGia>     ?? new();
-    var nhaXuatBans = ViewBag.NhaXuatBans as List<NhaXuatBan> ?? new();
+    var theLoais    = ViewBag.TheLoais    as List<LookupItemDto> ?? new();
+    var tacGias     = ViewBag.TacGias     as List<LookupItemDto> ?? new();
+    var nhaXuatBans = ViewBag.NhaXuatBans as List<LookupItemDto> ?? new();
 }
 
 <h4 class="fw-bold mb-3"><i class="bi bi-tags me-2 text-success"></i>Quản lý danh mục</h4>
-
-@if (TempData["Success"] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show py-2" role="alert">
-        <i class="bi bi-check-circle me-1"></i>@TempData["Success"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
-@if (TempData["Error"] != null)
-{
-    <div class="alert alert-danger alert-dismissible fade show py-2" role="alert">
-        <i class="bi bi-exclamation-triangle me-1"></i>@TempData["Error"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
 
 <div class="row g-3">
 
@@ -40,9 +25,9 @@
                     @foreach (var tl in theLoais)
                     {
                         <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
-                            <span class="small">@tl.TenTheLoai</span>
-                            <form asp-action="DeleteTheLoai" asp-route-id="@tl.MaTheLoai" method="post"
-                                  onsubmit="return confirm('Xóa thể loại «@tl.TenTheLoai»?')">
+                            <span class="small">@tl.Ten</span>
+                            <form asp-action="DeleteTheLoai" asp-route-id="@tl.Id" method="post"
+                                  onsubmit="return confirm('Xóa thể loại «@tl.Ten»?')">
                                 @Html.AntiForgeryToken()
                                 <button type="submit" class="btn btn-outline-danger btn-sm px-2 py-0" title="Xóa">
                                     <i class="bi bi-trash"></i>
@@ -81,9 +66,9 @@
                     @foreach (var tg in tacGias)
                     {
                         <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
-                            <span class="small">@tg.TenTacGia</span>
-                            <form asp-action="DeleteTacGia" asp-route-id="@tg.MaTacGia" method="post"
-                                  onsubmit="return confirm('Xóa tác giả «@tg.TenTacGia»?')">
+                            <span class="small">@tg.Ten</span>
+                            <form asp-action="DeleteTacGia" asp-route-id="@tg.Id" method="post"
+                                  onsubmit="return confirm('Xóa tác giả «@tg.Ten»?')">
                                 @Html.AntiForgeryToken()
                                 <button type="submit" class="btn btn-outline-danger btn-sm px-2 py-0" title="Xóa">
                                     <i class="bi bi-trash"></i>
@@ -122,9 +107,9 @@
                     @foreach (var nxb in nhaXuatBans)
                     {
                         <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
-                            <span class="small">@nxb.TenNXB</span>
-                            <form asp-action="DeleteNXB" asp-route-id="@nxb.MaNXB" method="post"
-                                  onsubmit="return confirm('Xóa NXB «@nxb.TenNXB»?')">
+                            <span class="small">@nxb.Ten</span>
+                            <form asp-action="DeleteNXB" asp-route-id="@nxb.Id" method="post"
+                                  onsubmit="return confirm('Xóa NXB «@nxb.Ten»?')">
                                 @Html.AntiForgeryToken()
                                 <button type="submit" class="btn btn-outline-danger btn-sm px-2 py-0" title="Xóa">
                                     <i class="bi bi-trash"></i>

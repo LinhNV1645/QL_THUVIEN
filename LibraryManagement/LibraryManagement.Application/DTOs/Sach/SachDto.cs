@@ -9,6 +9,7 @@ public class SachDto {
     public int MaTacGia { get; set; }
     public int MaNXB { get; set; }
     public short? NamXuatBan { get; set; }
+    public short? SoTrang { get; set; }
     public int SoLuongTon { get; set; }
     public int SoLuongNhap { get; set; }
     public string? ViTri { get; set; }

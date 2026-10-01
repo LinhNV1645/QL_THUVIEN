@@ -1,32 +1,24 @@
 using LibraryManagement.Application.DTOs.TraSach;
 using LibraryManagement.Application.Interfaces;
-using LibraryManagement.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 using System.Security.Claims;
 using System.Text.Json;
 
 namespace LibraryManagement.Web.Controllers;
 
 [Authorize(Policy = "Staff")]
-public class TraSachController : Controller
+public class TraSachController(
+    IPhieuTraRepository phieuTraRepo,
+    IPhieuMuonRepository phieuMuonRepo,
+    ICauHinhRepository cauHinhRepo) : Controller
 {
-    private readonly IPhieuTraRepository _phieuTraRepo;
-    private readonly AppDbContext _db;
-
-    public TraSachController(IPhieuTraRepository phieuTraRepo, AppDbContext db)
-    {
-        _phieuTraRepo = phieuTraRepo;
-        _db = db;
-    }
-
     // GET /TraSach
     public async Task<IActionResult> Index()
     {
-        var chuaThuPhat = await _phieuTraRepo.GetChuaThuPhatAsync();
-        ViewBag.ChuaThuPhat = chuaThuPhat;
-        return View(chuaThuPhat);
+        var all = await phieuTraRepo.GetAllAsync();
+        return View(all);
     }
 
     // GET /TraSach/LapPhieu?maPhieuMuon={id}
@@ -40,6 +32,7 @@ public class TraSachController : Controller
                 .Include(pm => pm.CTPhieuMuons).ThenInclude(ct => ct.Sach)
                 .FirstOrDefaultAsync(pm => pm.MaPhieuMuon == maPhieuMuon.Value);
             ViewBag.PhieuMuon = phieuMuon;
+            ViewBag.MucPhat = phieuMuon == null ? 0 : await LayMucPhatAsync();
         }
         return View();
     }
@@ -59,7 +52,7 @@ public class TraSachController : Controller
                 GhiChu = ghiChu
             };
 
-            var result = await _phieuTraRepo.TraSachAsync(dto);
+            var result = await phieuTraRepo.TraSachAsync(dto);
             TempData["TraKetQua"] = JsonSerializer.Serialize(result);
             TempData["Success"] = $"Trả sách thành công! Phiếu trả #{result.MaPhieuTra}";
             return RedirectToAction(nameof(Detail), new { id = result.MaPhieuTra });
@@ -67,10 +60,9 @@ public class TraSachController : Controller
         catch (Exception ex)
         {
             TempData["Error"] = "Lỗi: " + ex.Message;
-            var phieuMuon = await _db.PhieuMuons
-                .Include(pm => pm.DocGia)
-                .FirstOrDefaultAsync(pm => pm.MaPhieuMuon == maPhieuMuon);
+            var phieuMuon = await phieuMuonRepo.GetByIdAsync(maPhieuMuon);
             ViewBag.PhieuMuon = phieuMuon;
+            ViewBag.MucPhat = phieuMuon == null ? 0 : await LayMucPhatAsync();
             return View();
         }
     }
@@ -79,7 +71,7 @@ public class TraSachController : Controller
     [HttpGet]
     public async Task<IActionResult> Detail(int id)
     {
-        var phieuTra = await _phieuTraRepo.GetByIdAsync(id);
+        var phieuTra = await phieuTraRepo.GetByIdAsync(id);
         if (phieuTra == null) return NotFound();
 
         if (TempData["TraKetQua"] is string json)
@@ -96,7 +88,7 @@ public class TraSachController : Controller
     {
         try
         {
-            await _phieuTraRepo.ThuPhatAsync(id);
+            await phieuTraRepo.ThuPhatAsync(id);
             TempData["Success"] = "Đã ghi nhận thu phạt thành công.";
         }
         catch (Exception ex)
@@ -104,5 +96,11 @@ public class TraSachController : Controller
             TempData["Error"] = "Lỗi: " + ex.Message;
         }
         return RedirectToAction(nameof(Detail), new { id });
+    }
+
+    private async Task<decimal> LayMucPhatAsync()
+    {
+        var giaTri = await cauHinhRepo.GetValueAsync("MucPhatNgayTreHan");
+        return decimal.TryParse(giaTri, NumberStyles.Number, CultureInfo.InvariantCulture, out var v) ? v : 0;
     }
 }

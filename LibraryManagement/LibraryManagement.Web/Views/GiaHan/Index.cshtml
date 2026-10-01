@@ -1,151 +1,134 @@
-@using LibraryManagement.Application.DTOs.MuonSach
+@model PhieuMuonDetailDto
 @{
     ViewData["Title"] = "Gia hạn mượn sách";
-    var lichSu = ViewBag.LichSuGiaHan as IEnumerable<GiaHanDto> ?? Enumerable.Empty<GiaHanDto>();
-    int soLanDaGiaHan = ViewBag.SoLanDaGiaHan ?? 0;
-    // PhieuMuon là dynamic entity từ EF
-    dynamic? pm = ViewBag.PhieuMuon;
-    bool quaHan = false;
-    if (pm != null) { quaHan = DateOnly.FromDateTime(DateTime.Today) > (DateOnly)pm.NgayHanTra; }
+    var lichSu = Model.LichSuGiaHan;
+    bool quaHan = Model.SoNgayTreHan > 0;
+    bool daTra = Model.TrangThai == 2;
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h4 class="fw-bold mb-0"><i class="bi bi-calendar-plus me-2 text-success"></i>Gia hạn mượn sách</h4>
-    @if (pm != null)
-    {
-        <a asp-controller="MuonSach" asp-action="Detail" asp-route-id="@pm.MaPhieuMuon"
-           class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-arrow-left me-1"></i>Quay lại phiếu mượn
-        </a>
-    }
+    <a asp-controller="MuonSach" asp-action="Detail" asp-route-id="@Model.MaPhieuMuon"
+       class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Quay lại phiếu mượn
+    </a>
 </div>
 
-@if (TempData["Success"] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show py-2">
-        <i class="bi bi-check-circle me-1"></i>@TempData["Success"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
-@if (TempData["Error"] != null)
-{
-    <div class="alert alert-danger alert-dismissible fade show py-2">
-        <i class="bi bi-exclamation-triangle me-1"></i>@TempData["Error"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
+<div class="row g-3">
+    <div class="col-md-6">
+        <!-- Thông tin phiếu mượn -->
+        <div class="card shadow-sm mb-3">
+            <div class="card-header bg-success-subtle fw-semibold">
+                <i class="bi bi-file-earmark-text me-1"></i>Thông tin phiếu mượn #@Model.MaPhieuMuon
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-borderless mb-0">
+                    <tr>
+                        <td class="text-muted" style="width:45%">Độc giả</td>
+                        <td class="fw-semibold">@Model.TenDocGia <span class="badge bg-secondary ms-1">@Model.Lop</span></td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Ngày mượn</td>
+                        <td>@Model.NgayMuon.ToString("dd/MM/yyyy")</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Hạn trả hiện tại</td>
+                        <td>
+                            <strong class="@(quaHan ? "text-danger" : "text-success")">
+                                @Model.NgayHanTra.ToString("dd/MM/yyyy")
+                            </strong>
+                            @if (quaHan)
+                            {
+                                <span class="badge bg-danger ms-1">Quá hạn @Model.SoNgayTreHan ngày</span>
+                            }
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Số lần đã gia hạn</td>
+                        <td>
+                            <span class="badge bg-info text-dark">@lichSu.Count lần</span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
 
-@if (pm == null)
-{
-    <div class="alert alert-danger">Không tìm thấy phiếu mượn.</div>
-}
-else
-{
-    <div class="row g-3">
-        <div class="col-md-6">
-            <!-- Thông tin phiếu mượn -->
-            <div class="card shadow-sm mb-3">
-                <div class="card-header bg-success-subtle fw-semibold">
-                    <i class="bi bi-file-earmark-text me-1"></i>Thông tin phiếu mượn #@pm.MaPhieuMuon
+        @if (lichSu.Any())
+        {
+            <div class="card shadow-sm">
+                <div class="card-header bg-light fw-semibold small">
+                    <i class="bi bi-clock-history me-1"></i>Lịch sử gia hạn
                 </div>
-                <div class="card-body">
-                    <table class="table table-sm table-borderless mb-0">
-                        <tr>
-                            <td class="text-muted" style="width:45%">Độc giả</td>
-                            <td class="fw-semibold">@pm.DocGia.HoTen</td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted">Ngày mượn</td>
-                            <td>@((pm.NgayMuon as DateOnly?)?.ToString("dd/MM/yyyy") ?? pm.NgayMuon.ToString("dd/MM/yyyy"))</td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted">Hạn trả hiện tại</td>
-                            <td>
-                                <strong class="@(quaHan ? "text-danger" : "text-success")">
-                                    @((pm.NgayHanTra as DateOnly?)?.ToString("dd/MM/yyyy") ?? pm.NgayHanTra.ToString("dd/MM/yyyy"))
-                                </strong>
-                                @if (quaHan)
-                                {
-                                    <span class="badge bg-danger ms-1">Quá hạn</span>
-                                }
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted">Số lần đã gia hạn</td>
-                            <td>
-                                <span class="badge bg-info text-dark">@soLanDaGiaHan lần</span>
-                            </td>
-                        </tr>
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Lần</th>
+                                <th>Ngày gia hạn</th>
+                                <th>Hạn cũ</th>
+                                <th>Hạn mới</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var gh in lichSu)
+                            {
+                                <tr>
+                                    <td><span class="badge bg-secondary">@gh.LanGiaHan</span></td>
+                                    <td class="small">@gh.NgayGiaHan.ToString("dd/MM/yyyy")</td>
+                                    <td class="small text-muted">@gh.HanTraCu.ToString("dd/MM/yyyy")</td>
+                                    <td class="small text-success">@gh.HanTraMoi.ToString("dd/MM/yyyy")</td>
+                                </tr>
+                            }
+                        </tbody>
                     </table>
                 </div>
             </div>
+        }
+    </div>
 
-            @if (lichSu.Any())
-            {
-                <div class="card shadow-sm">
-                    <div class="card-header bg-light fw-semibold small">
-                        <i class="bi bi-clock-history me-1"></i>Lịch sử gia hạn
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-success-subtle fw-semibold">
+                <i class="bi bi-calendar-check me-1"></i>Xác nhận gia hạn
+            </div>
+            <div class="card-body">
+                @if (daTra)
+                {
+                    <div class="alert alert-secondary mb-0">
+                        <i class="bi bi-check2-circle me-1"></i>Phiếu mượn này đã được trả, không thể gia hạn.
                     </div>
-                    <div class="card-body p-0">
-                        <table class="table table-sm mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Lần</th>
-                                    <th>Ngày gia hạn</th>
-                                    <th>Hạn cũ</th>
-                                    <th>Hạn mới</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var gh in lichSu)
-                                {
-                                    <tr>
-                                        <td><span class="badge bg-secondary">@gh.LanGiaHan</span></td>
-                                        <td class="small">@gh.NgayGiaHan.ToString("dd/MM/yyyy")</td>
-                                        <td class="small text-muted">@gh.HanTraCu.ToString("dd/MM/yyyy")</td>
-                                        <td class="small text-success">@gh.HanTraMoi.ToString("dd/MM/yyyy")</td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
+                }
+                else if (quaHan)
+                {
+                    <div class="alert alert-danger mb-3">
+                        <i class="bi bi-x-circle-fill me-1"></i>
+                        <strong>Phiếu mượn đã quá hạn.</strong> Không thể gia hạn. Vui lòng yêu cầu trả sách.
                     </div>
-                </div>
-            }
-        </div>
-
-        <div class="col-md-6">
-            <div class="card shadow-sm">
-                <div class="card-header bg-success-subtle fw-semibold">
-                    <i class="bi bi-calendar-check me-1"></i>Xác nhận gia hạn
-                </div>
-                <div class="card-body">
-                    @if (quaHan)
-                    {
-                        <div class="alert alert-danger">
-                            <i class="bi bi-x-circle-fill me-1"></i>
-                            <strong>Phiếu mượn đã quá hạn.</strong> Không thể gia hạn. Vui lòng yêu cầu trả sách.
+                    <a asp-controller="TraSach" asp-action="LapPhieu" asp-route-maPhieuMuon="@Model.MaPhieuMuon"
+                       class="btn btn-primary w-100">
+                        <i class="bi bi-arrow-bar-left me-1"></i>Lập phiếu trả sách
+                    </a>
+                }
+                else
+                {
+                    <p class="text-muted small mb-3">
+                        Hệ thống sẽ tự động cộng thêm số ngày gia hạn theo cấu hình
+                        và kiểm tra số lần gia hạn tối đa.
+                    </p>
+                    <form asp-action="Index" asp-route-maPhieuMuon="@Model.MaPhieuMuon" method="post">
+                        @Html.AntiForgeryToken()
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Ghi chú <span class="text-muted fw-normal">(tuỳ chọn)</span></label>
+                            <textarea name="ghiChu" class="form-control" rows="3" maxlength="300"
+                                      placeholder="Lý do gia hạn..."></textarea>
                         </div>
-                    }
-                    else
-                    {
-                        <p class="text-muted small mb-3">
-                            Hệ thống sẽ tự động tính hạn trả mới theo cấu hình số ngày mượn mặc định.
-                        </p>
-                        <form asp-action="Index" asp-route-maPhieuMuon="@pm.MaPhieuMuon" method="post">
-                            @Html.AntiForgeryToken()
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold">Ghi chú <span class="text-muted fw-normal">(tuỳ chọn)</span></label>
-                                <textarea name="ghiChu" class="form-control" rows="3"
-                                          placeholder="Lý do gia hạn..."></textarea>
-                            </div>
-                            <button type="submit" class="btn btn-success w-100"
-                                    onclick="return confirm('Xác nhận gia hạn phiếu mượn #@pm.MaPhieuMuon?')">
-                                <i class="bi bi-calendar-plus me-1"></i>Xác nhận gia hạn
-                            </button>
-                        </form>
-                    }
-                </div>
+                        <button type="submit" class="btn btn-success w-100"
+                                onclick="return confirm('Xác nhận gia hạn phiếu mượn #@Model.MaPhieuMuon?')">
+                            <i class="bi bi-calendar-plus me-1"></i>Xác nhận gia hạn
+                        </button>
+                    </form>
+                }
             </div>
         </div>
     </div>
-}
+</div>

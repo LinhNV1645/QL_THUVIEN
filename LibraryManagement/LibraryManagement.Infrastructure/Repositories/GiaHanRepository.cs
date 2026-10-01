@@ -13,23 +13,32 @@ public class GiaHanRepository(AppDbContext db) : IGiaHanRepository
     public async Task<DateOnly> GiaHanAsync(int maPhieuMuon, int nhanVienDuyet, string? ghiChu)
     {
         await db.Database.OpenConnectionAsync();
-        using var cmd = (SqlCommand)db.Database.GetDbConnection().CreateCommand();
-        cmd.CommandType = CommandType.StoredProcedure;
-        cmd.CommandText = "sp_GiaHanPhieuMuon";
-        cmd.Parameters.AddWithValue("@MaPhieuMuon",    maPhieuMuon);
-        cmd.Parameters.AddWithValue("@NhanVienDuyet",  nhanVienDuyet);
-        cmd.Parameters.AddWithValue("@GhiChu",         (object?)ghiChu ?? DBNull.Value);
-
-        DateOnly ngayHanTraMoi = default;
-        using var reader = await cmd.ExecuteReaderAsync();
-        if (await reader.ReadAsync())
+        try
         {
-            var raw = reader.GetValue(0);
-            ngayHanTraMoi = raw is DateOnly d ? d
-                : DateOnly.FromDateTime(Convert.ToDateTime(raw));
+            using var cmd = (SqlCommand)db.Database.GetDbConnection().CreateCommand();
+            cmd.CommandType = CommandType.StoredProcedure;
+            cmd.CommandText = "sp_GiaHanPhieuMuon";
+            cmd.Parameters.AddWithValue("@MaPhieuMuon",   maPhieuMuon);
+            cmd.Parameters.AddWithValue("@NhanVienDuyet", nhanVienDuyet);
+            cmd.Parameters.AddWithValue("@GhiChu",
+                string.IsNullOrWhiteSpace(ghiChu) ? DBNull.Value : ghiChu.Trim());
+
+            DateOnly ngayHanTraMoi = default;
+            using (var reader = await cmd.ExecuteReaderAsync())
+            {
+                if (await reader.ReadAsync())
+                {
+                    var raw = reader.GetValue(0);
+                    ngayHanTraMoi = raw is DateOnly d ? d
+                        : DateOnly.FromDateTime(Convert.ToDateTime(raw));
+                }
+            }
+            return ngayHanTraMoi;
         }
-        db.Database.CloseConnection();
-        return ngayHanTraMoi;
+        finally
+        {
+            await db.Database.CloseConnectionAsync();
+        }
     }
 
     public async Task<IEnumerable<GiaHanDto>> GetByPhieuMuonAsync(int maPhieuMuon)

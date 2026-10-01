@@ -1,51 +1,61 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using LibraryManagement.Infrastructure.Persistence;
-using LibraryManagement.Application.DTOs.ThongKe;
+using LibraryManagement.Application.Interfaces;
 using LibraryManagement.Web.Models;
 
 namespace LibraryManagement.Web.Controllers;
 
 [Authorize]
-public class HomeController : Controller
+public class HomeController(IThongKeRepository thongKeRepo) : Controller
 {
-    private readonly AppDbContext _db;
+    private static readonly int[] SoNgayHopLe = [3, 7, 14];
 
-    public HomeController(AppDbContext db)
+    // GET /?ky=thang|nam|tatca&soNgay=3|7|14
+    public async Task<IActionResult> Index(string? ky, int soNgay = 7)
     {
-        _db = db;
-    }
+        var homNay = DateOnly.FromDateTime(DateTime.Today);
+        ky = ky is "thang" or "nam" or "tatca" ? ky : "nam";
+        soNgay = SoNgayHopLe.Contains(soNgay) ? soNgay : 7;
 
-    public async Task<IActionResult> Index()
-    {
-        var now = DateTime.Today;
-        var today = DateOnly.FromDateTime(now);
-
-        var dto = new DashboardDto
+        (DateOnly? TuNgay, string Ten) khoang = ky switch
         {
-            TongDauSach     = await _db.Sachs.CountAsync(s => s.TrangThai == 1),
-            TongSachTon     = await _db.Sachs.Where(s => s.TrangThai == 1).SumAsync(s => s.SoLuongTon),
-            TongDocGia      = await _db.DocGias.CountAsync(d => d.TrangThai == 1),
-            DangMuon        = await _db.PhieuMuons.CountAsync(pm => pm.TrangThai == 1 || pm.TrangThai == 4),
-            QuaHan          = await _db.PhieuMuons.CountAsync(pm => pm.TrangThai == 1 && pm.NgayHanTra < today),
-            TienPhatChuaThu = await _db.PhieuTras.Where(pt => pt.DaThuPhat == false).SumAsync(pt => (decimal?)pt.TienPhat) ?? 0,
-            MuonTrongThang  = await _db.PhieuMuons.CountAsync(pm => pm.NgayMuon.Month == now.Month && pm.NgayMuon.Year == now.Year)
+            "thang" => (new DateOnly(homNay.Year, homNay.Month, 1), $"Tháng {homNay.Month}/{homNay.Year}"),
+            "nam"   => (new DateOnly(homNay.Year, 1, 1), $"Năm {homNay.Year}"),
+            _       => (null, "Toàn thời gian")
+        };
+        var tuNgay = khoang.TuNgay;
+        var tenKy = khoang.Ten;
+        DateOnly? denNgay = tuNgay is null ? null : homNay;
+
+        var laNhanVien = User.IsInRole("Admin") || User.IsInRole("NhanVien");
+        var tongQuan = await thongKeRepo.GetDashboardAsync();
+
+        var vm = new DashboardViewModel
+        {
+            TongQuan        = tongQuan,
+            SoNgaySapDenHan = soNgay,
+            KyThongKe       = ky,
+            TenKyThongKe    = tenKy,
+            LaNhanVien      = laNhanVien,
+            TopSach         = await thongKeRepo.GetTopSachAsync(tuNgay, denNgay, 10)
         };
 
-        var quaHanList = await _db.PhieuMuons
-            .Include(pm => pm.DocGia)
-            .Where(pm => pm.TrangThai == 1 && pm.NgayHanTra < today)
-            .OrderBy(pm => pm.NgayHanTra)
-            .Take(5)
-            .Select(pm => new { pm.MaPhieuMuon, pm.DocGia.HoTen, pm.NgayHanTra })
-            .ToListAsync();
+        if (laNhanVien)
+        {
+            if (tongQuan.QuaHan > 0)
+                vm.QuaHan = (await thongKeRepo.GetTopQuaHanAsync(5)).ToList();
 
-        ViewBag.QuaHanList = quaHanList;
-        return View(dto);
+            var (sapDenHan, tongSo) = await thongKeRepo.GetSapDenHanAsync(soNgay, 10);
+            vm.SapDenHan       = sapDenHan;
+            vm.TongSoSapDenHan = tongSo;
+            vm.TopDocGia       = await thongKeRepo.GetTopDocGiaAsync(tuNgay, denNgay, 10);
+        }
+
+        return View(vm);
     }
 
+    [AllowAnonymous]
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
     public IActionResult Error()
     {
