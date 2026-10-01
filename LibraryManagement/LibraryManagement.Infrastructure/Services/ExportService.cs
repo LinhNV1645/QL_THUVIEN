@@ -134,16 +134,26 @@ public class ExportService(AppDbContext db, ISachRepository sachRepo) : IExportS
             ws.Cell(1, i + 1).Style.Font.Bold = true;
         }
 
-        var data = await db.CTPhieuMuons
+        // Fetch trước rồi group trong memory — tránh lỗi EF Core dịch GroupBy với navigation properties
+        var raw = await db.CTPhieuMuons
             .Include(ct => ct.Sach).ThenInclude(s => s.TacGia)
             .Include(ct => ct.Sach).ThenInclude(s => s.TheLoai)
             .Include(ct => ct.PhieuMuon)
             .Where(ct => ct.PhieuMuon.NgayMuon.Month == thang && ct.PhieuMuon.NgayMuon.Year == nam)
-            .GroupBy(ct => new { ct.MaSach, ct.Sach.TenSach, ct.Sach.TacGia.TenTacGia, ct.Sach.TheLoai.TenTheLoai })
+            .ToListAsync();
+
+        var data = raw
+            .GroupBy(ct => new
+            {
+                ct.MaSach,
+                TenSach    = ct.Sach?.TenSach    ?? "",
+                TenTacGia  = ct.Sach?.TacGia?.TenTacGia   ?? "",
+                TenTheLoai = ct.Sach?.TheLoai?.TenTheLoai  ?? ""
+            })
             .Select(g => new { g.Key.MaSach, g.Key.TenSach, g.Key.TenTacGia, g.Key.TenTheLoai, SoLuot = g.Count() })
             .OrderByDescending(x => x.SoLuot)
             .Take(20)
-            .ToListAsync();
+            .ToList();
 
         int row = 2; int stt = 1;
         foreach (var x in data)
@@ -169,20 +179,26 @@ public class ExportService(AppDbContext db, ISachRepository sachRepo) : IExportS
             ws.Cell(1, i + 1).Style.Font.Bold = true;
         }
 
-        var data = await db.PhieuMuons
+        // Fetch trước rồi group trong memory — tránh lỗi EF Core dịch Sum(navigation.Count)
+        var rawDoc = await db.PhieuMuons
             .Include(p => p.DocGia)
             .Include(p => p.CTPhieuMuons)
             .Where(p => p.NgayMuon.Month == thang && p.NgayMuon.Year == nam)
-            .GroupBy(p => new { p.MaDocGia, p.DocGia.HoTen, p.DocGia.Lop })
+            .ToListAsync();
+
+        var data = rawDoc
+            .GroupBy(p => new { p.MaDocGia, HoTen = p.DocGia?.HoTen ?? "", Lop = p.DocGia?.Lop })
             .Select(g => new
             {
-                g.Key.MaDocGia, g.Key.HoTen, g.Key.Lop,
-                SoLanMuon     = g.Count(),
-                TongSachMuon  = g.Sum(p => p.CTPhieuMuons.Count)
+                g.Key.MaDocGia,
+                g.Key.HoTen,
+                g.Key.Lop,
+                SoLanMuon    = g.Count(),
+                TongSachMuon = g.Sum(p => p.CTPhieuMuons.Count)
             })
             .OrderByDescending(x => x.SoLanMuon)
             .Take(20)
-            .ToListAsync();
+            .ToList();
 
         int row = 2; int stt = 1;
         foreach (var x in data)

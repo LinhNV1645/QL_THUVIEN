@@ -52,7 +52,8 @@ public class MuonSachController : Controller
     public async Task<IActionResult> LapPhieu(
         int maDocGia,
         string sachJson,
-        string? ghiChu)
+        string? ghiChu,
+        string? ngayHanTra)
     {
         try
         {
@@ -67,13 +68,21 @@ public class MuonSachController : Controller
                 return View();
             }
 
+            DateOnly? hanTra = null;
+            if (!string.IsNullOrEmpty(ngayHanTra) &&
+                DateOnly.TryParseExact(ngayHanTra, "yyyy-MM-dd",
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.None, out var parsed))
+                hanTra = parsed;
+
             var maNhanVien = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
             var dto = new LapPhieuMuonDto
             {
-                MaDocGia = maDocGia,
-                DanhSachSach = danhSachSach,
-                NhanVienLap = maNhanVien,
-                GhiChu = ghiChu
+                MaDocGia      = maDocGia,
+                DanhSachSach  = danhSachSach,
+                NhanVienLap   = maNhanVien,
+                GhiChu        = ghiChu,
+                NgayHanTra    = hanTra
             };
 
             var maPhieu = await _phieuMuonRepo.LapPhieuMuonAsync(dto);
@@ -147,5 +156,29 @@ public class MuonSachController : Controller
             lop = docGia.Lop ?? "",
             soSachDangMuon = dangMuon.Count()
         });
+    }
+
+    // GET /MuonSach/LichSuDocGia?maDocGia=...  (AJAX)
+    [HttpGet]
+    public async Task<IActionResult> LichSuDocGia(int maDocGia)
+    {
+        var list = await _db.PhieuMuons
+            .Include(p => p.CTPhieuMuons).ThenInclude(ct => ct.Sach)
+            .Where(p => p.MaDocGia == maDocGia)
+            .OrderByDescending(p => p.NgayMuon)
+            .Take(10)
+            .Select(p => new
+            {
+                maPhieuMuon = p.MaPhieuMuon,
+                ngayMuon    = p.NgayMuon.ToString("dd/MM/yyyy"),
+                ngayHanTra  = p.NgayHanTra.ToString("dd/MM/yyyy"),
+                trangThai   = p.TrangThai == 0 ? "Đã trả" : p.TrangThai == 1 ? "Đang mượn" :
+                              p.TrangThai == 2 ? "Quá hạn" : p.TrangThai == 3 ? "Đã xử lý" : "Gia hạn",
+                soSach      = p.CTPhieuMuons.Count,
+                sachNames   = string.Join(", ", p.CTPhieuMuons.Select(ct => ct.Sach.TenSach))
+            })
+            .ToListAsync();
+
+        return Json(list);
     }
 }

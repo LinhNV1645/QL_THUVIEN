@@ -1,5 +1,7 @@
 @{
     ViewData["Title"] = "Lập phiếu mượn";
+    var today = DateOnly.FromDateTime(DateTime.Today);
+    var defaultHanTra = today.AddDays(14);
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -42,6 +44,26 @@
                 </div>
             </div>
 
+            <!-- Ngày mượn + Ngày hạn trả -->
+            <div class="card shadow-sm mt-3">
+                <div class="card-header py-2">
+                    <i class="bi bi-calendar-event me-2"></i>Thời gian mượn
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Ngày mượn</label>
+                        <input type="text" class="form-control" value="@today.ToString("dd/MM/yyyy")" readonly disabled />
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label fw-semibold">Ngày trả dự kiến <span class="text-danger">*</span></label>
+                        <input type="date" name="ngayHanTra" id="ngayHanTra" class="form-control"
+                               value="@defaultHanTra.ToString("yyyy-MM-dd")"
+                               min="@today.AddDays(1).ToString("yyyy-MM-dd")"
+                               required />
+                    </div>
+                </div>
+            </div>
+
             <!-- Ghi chú -->
             <div class="card shadow-sm mt-3">
                 <div class="card-header py-2">
@@ -50,6 +72,35 @@
                 <div class="card-body">
                     <textarea name="ghiChu" class="form-control" rows="3"
                               placeholder="Ghi chú thêm (tuỳ chọn)..."></textarea>
+                </div>
+            </div>
+
+            <!-- Lịch sử mượn sách -->
+            <div class="card shadow-sm mt-3 d-none" id="lichSuCard">
+                <div class="card-header py-2 bg-light">
+                    <i class="bi bi-clock-history me-2"></i>Lịch sử mượn (10 lần gần nhất)
+                </div>
+                <div class="card-body p-0">
+                    <div id="lichSuLoading" class="text-center text-muted py-3 d-none">
+                        <div class="spinner-border spinner-border-sm me-2"></div>Đang tải...
+                    </div>
+                    <div id="lichSuEmpty" class="text-center text-muted py-3 d-none">
+                        <i class="bi bi-inbox me-1"></i>Chưa có lịch sử mượn.
+                    </div>
+                    <div class="table-responsive" id="lichSuTableWrapper" style="display:none">
+                        <table class="table table-sm mb-0 small">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Phiếu #</th>
+                                    <th>Ngày mượn</th>
+                                    <th>Hạn trả</th>
+                                    <th>Sách</th>
+                                    <th>Trạng thái</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lichSuRows"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -141,6 +192,49 @@ async function selectDocGia(d) {
         document.getElementById('infoLop').textContent = info.lop || '—';
         document.getElementById('infoSoSach').textContent = info.soSachDangMuon;
         document.getElementById('docGiaInfo').classList.remove('d-none');
+    }
+    // load lịch sử
+    loadLichSu(d.id);
+}
+
+async function loadLichSu(maDocGia) {
+    const card = document.getElementById('lichSuCard');
+    const loading = document.getElementById('lichSuLoading');
+    const empty = document.getElementById('lichSuEmpty');
+    const tableWrapper = document.getElementById('lichSuTableWrapper');
+    const tbody = document.getElementById('lichSuRows');
+
+    card.classList.remove('d-none');
+    loading.classList.remove('d-none');
+    empty.classList.add('d-none');
+    tableWrapper.style.display = 'none';
+
+    try {
+        const res = await fetch(`/MuonSach/LichSuDocGia?maDocGia=${maDocGia}`);
+        const data = await res.json();
+        loading.classList.add('d-none');
+
+        if (!data.length) {
+            empty.classList.remove('d-none');
+            return;
+        }
+
+        tbody.innerHTML = data.map(r => {
+            const badgeClass = r.trangThai === 'Đang mượn' ? 'bg-warning text-dark' :
+                               r.trangThai === 'Đã trả'    ? 'bg-success' :
+                               r.trangThai === 'Quá hạn'   ? 'bg-danger'  : 'bg-secondary';
+            return `<tr>
+                <td class="ps-2">#${r.maPhieuMuon}</td>
+                <td>${r.ngayMuon}</td>
+                <td>${r.ngayHanTra}</td>
+                <td class="text-truncate" style="max-width:160px" title="${r.sachNames}">${r.sachNames || '—'}</td>
+                <td><span class="badge ${badgeClass}">${r.trangThai}</span></td>
+            </tr>`;
+        }).join('');
+        tableWrapper.style.display = '';
+    } catch {
+        loading.classList.add('d-none');
+        empty.classList.remove('d-none');
     }
 }
 

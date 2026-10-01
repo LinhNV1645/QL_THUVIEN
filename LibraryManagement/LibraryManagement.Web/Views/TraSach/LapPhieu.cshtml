@@ -1,0 +1,162 @@
+@using LibraryManagement.Domain.Entities
+@{
+    ViewData["Title"] = "Lập phiếu trả";
+    var phieuMuon = ViewBag.PhieuMuon as PhieuMuon;
+    var today = DateTime.Today;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0"><i class="bi bi-arrow-bar-left me-2 text-success"></i>Lập phiếu trả sách</h4>
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Quay lại
+    </a>
+</div>
+
+@if (phieuMuon == null)
+{
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form method="get" asp-action="LapPhieu" class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Mã phiếu mượn</label>
+                    <input type="number" name="maPhieuMuon" class="form-control"
+                           placeholder="Nhập mã phiếu mượn..." min="1" required />
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-search me-1"></i>Tra cứu
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+else
+{
+    <div class="row g-3">
+        <div class="col-md-5">
+            <!-- Thông tin phiếu mượn -->
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-success text-white py-2">
+                    <i class="bi bi-file-earmark-text me-2"></i>Thông tin phiếu mượn #@phieuMuon.MaPhieuMuon
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0 small">
+                        <dt class="col-5 text-muted">Độc giả</dt>
+                        <dd class="col-7 fw-semibold">@(phieuMuon.DocGia?.HoTen ?? "—")</dd>
+                        <dt class="col-5 text-muted">Lớp</dt>
+                        <dd class="col-7">@(phieuMuon.DocGia?.Lop ?? "—")</dd>
+                        <dt class="col-5 text-muted">Ngày mượn</dt>
+                        <dd class="col-7">@phieuMuon.NgayMuon.ToString("dd/MM/yyyy")</dd>
+                        <dt class="col-5 text-muted">Hạn trả</dt>
+                        <dd class="col-7">
+                            @{
+                                var isLate = phieuMuon.NgayHanTra < DateOnly.FromDateTime(today);
+                            }
+                            <span class="@(isLate ? "text-danger fw-bold" : "")">
+                                @phieuMuon.NgayHanTra.ToString("dd/MM/yyyy")
+                                @if (isLate)
+                                {
+                                    var soNgayTre = DateOnly.FromDateTime(today).DayNumber - phieuMuon.NgayHanTra.DayNumber;
+                                    <span class="badge bg-danger ms-1">Trễ @soNgayTre ngày</span>
+                                }
+                            </span>
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Form trả sách -->
+            <div class="card shadow-sm">
+                <div class="card-header py-2">
+                    <i class="bi bi-calendar-check me-2"></i>Thông tin trả
+                </div>
+                <div class="card-body">
+                    <form method="post" asp-action="LapPhieu">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="maPhieuMuon" value="@phieuMuon.MaPhieuMuon" />
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Ngày trả sách</label>
+                            <input type="text" class="form-control"
+                                   value="@today.ToString("dd/MM/yyyy")"
+                                   readonly disabled />
+                            <div class="form-text text-muted">Ngày trả mặc định là hôm nay.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Tình trạng sách <span class="text-danger">*</span></label>
+                            <select name="trangThaiSach" class="form-select" required>
+                                <option value="1">Tốt — nguyên vẹn</option>
+                                <option value="2">Hơi cũ / bẩn nhẹ</option>
+                                <option value="3">Hư hỏng một phần</option>
+                                <option value="4">Hư hỏng nặng / mất</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Ghi chú</label>
+                            <textarea name="ghiChu" class="form-control" rows="3"
+                                      placeholder="Ghi chú thêm (tuỳ chọn)..."></textarea>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-check-circle me-1"></i>Xác nhận trả sách
+                            </button>
+                            <a asp-action="Index" class="btn btn-outline-secondary">Hủy</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-7">
+            <!-- Danh sách sách trong phiếu mượn -->
+            <div class="card shadow-sm">
+                <div class="card-header py-2">
+                    <i class="bi bi-book me-2"></i>Sách trong phiếu mượn
+                </div>
+                <div class="card-body p-0">
+                    @if (phieuMuon.CTPhieuMuons?.Any() == true)
+                    {
+                        <table class="table table-sm mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3">Tên sách</th>
+                                    <th style="width:100px">Số lượng</th>
+                                    <th style="width:100px">Trạng thái</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var ct in phieuMuon.CTPhieuMuons)
+                                {
+                                    <tr>
+                                        <td class="ps-3">@ct.Sach?.TenSach</td>
+                                        <td>@ct.SoLuongMuon</td>
+                                        <td>
+                                            @if (ct.TrangThaiCT == 1)
+                                            {
+                                                <span class="badge bg-warning text-dark">Đang mượn</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-success">Đã trả</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                    else
+                    {
+                        <div class="text-center text-muted py-4">
+                            <i class="bi bi-inbox fs-4 d-block mb-1"></i>Không có dữ liệu
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}

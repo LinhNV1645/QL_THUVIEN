@@ -18,21 +18,37 @@ public class PhieuMuonRepository(AppDbContext db) : IPhieuMuonRepository
         var json = JsonSerializer.Serialize(dto.DanhSachSach.Select(x => new { x.MaSach, x.SoLuong }));
 
         await db.Database.OpenConnectionAsync();
-        using var cmd = (SqlCommand)db.Database.GetDbConnection().CreateCommand();
-        cmd.CommandType    = CommandType.StoredProcedure;
-        cmd.CommandText    = "sp_LapPhieuMuon";
-        cmd.Parameters.AddWithValue("@MaDocGia",    dto.MaDocGia);
-        cmd.Parameters.AddWithValue("@DanhSachSach", json);
-        cmd.Parameters.AddWithValue("@NhanVienLap", dto.NhanVienLap);
-        if (dto.GhiChu != null) cmd.Parameters.AddWithValue("@GhiChu", dto.GhiChu);
+        int maPhieu;
+        using (var cmd = (SqlCommand)db.Database.GetDbConnection().CreateCommand())
+        {
+            cmd.CommandType   = CommandType.StoredProcedure;
+            cmd.CommandText   = "sp_LapPhieuMuon";
+            cmd.Parameters.AddWithValue("@MaDocGia",     dto.MaDocGia);
+            cmd.Parameters.AddWithValue("@DanhSachSach", json);
+            cmd.Parameters.AddWithValue("@NhanVienLap",  dto.NhanVienLap);
 
-        var outParam = new SqlParameter("@MaPhieuMuon", SqlDbType.Int)
-            { Direction = ParameterDirection.Output };
-        cmd.Parameters.Add(outParam);
+            var outParam = new SqlParameter("@MaPhieuMuon", SqlDbType.Int)
+                { Direction = ParameterDirection.Output };
+            cmd.Parameters.Add(outParam);
 
-        await cmd.ExecuteNonQueryAsync();
+            await cmd.ExecuteNonQueryAsync();
+            maPhieu = (int)outParam.Value;
+        }
         db.Database.CloseConnection();
-        return (int)outParam.Value;
+
+        // Cập nhật GhiChu / NgayHanTra sau khi SP tạo phiếu (SP không nhận 2 trường này)
+        if (dto.GhiChu != null || dto.NgayHanTra.HasValue)
+        {
+            var phieu = await db.PhieuMuons.FindAsync(maPhieu);
+            if (phieu != null)
+            {
+                if (dto.GhiChu != null)         phieu.GhiChu     = dto.GhiChu;
+                if (dto.NgayHanTra.HasValue)     phieu.NgayHanTra = dto.NgayHanTra.Value;
+                await db.SaveChangesAsync();
+            }
+        }
+
+        return maPhieu;
     }
 
     public async Task<PhieuMuonDetailDto?> GetByIdAsync(int maPhieu)

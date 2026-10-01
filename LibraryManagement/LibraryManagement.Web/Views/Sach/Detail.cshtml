@@ -83,7 +83,7 @@
             <div class="card-body">
                 @if (!string.IsNullOrEmpty(Model.MaQR))
                 {
-                    <img src="/Sach/QrImage/@Model.MaQR"
+                    <img src="/Sach/QrImage?maQR=@Model.MaQR"
                          alt="QR @Model.MaQR"
                          class="img-fluid border rounded"
                          style="max-width:200px" />

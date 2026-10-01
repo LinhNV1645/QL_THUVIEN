@@ -4,6 +4,7 @@ public class LapPhieuMuonDto {
     public List<SachMuonItem> DanhSachSach { get; set; } = [];
     public int NhanVienLap { get; set; }
     public string? GhiChu { get; set; }
+    public DateOnly? NgayHanTra { get; set; }
 }
 public class SachMuonItem {
     public int MaSach { get; set; }

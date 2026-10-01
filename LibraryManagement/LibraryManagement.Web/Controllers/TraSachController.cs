@@ -37,6 +37,7 @@ public class TraSachController : Controller
         {
             var phieuMuon = await _db.PhieuMuons
                 .Include(pm => pm.DocGia)
+                .Include(pm => pm.CTPhieuMuons).ThenInclude(ct => ct.Sach)
                 .FirstOrDefaultAsync(pm => pm.MaPhieuMuon == maPhieuMuon.Value);
             ViewBag.PhieuMuon = phieuMuon;
         }
