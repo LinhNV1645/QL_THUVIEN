@@ -1,0 +1,177 @@
+@model PaginatedResult<SachDto>
+@{
+    ViewData["Title"] = "Quản lý sách";
+    var filter = ViewBag.Filter as SachFilterDto ?? new SachFilterDto();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="fw-bold mb-0"><i class="bi bi-book me-2 text-success"></i>Quản lý sách</h4>
+    <div class="d-flex gap-2">
+        <a asp-action="Create" class="btn btn-success btn-sm">
+            <i class="bi bi-plus-lg me-1"></i>Thêm sách
+        </a>
+        <a asp-controller="ThongKe" asp-action="Index" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-file-earmark-excel me-1"></i>Xuất Excel
+        </a>
+    </div>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show py-2" role="alert">
+        <i class="bi bi-check-circle me-1"></i>@TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show py-2" role="alert">
+        <i class="bi bi-exclamation-triangle me-1"></i>@TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<!-- Filter bar -->
+<div class="card shadow-sm mb-3">
+    <div class="card-body py-2">
+        <form method="get" asp-action="Index" class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <input type="text" name="TuKhoa" value="@filter.TuKhoa"
+                       class="form-control form-control-sm" placeholder="Tìm tên sách..." />
+            </div>
+            <div class="col-md-3">
+                <select name="MaTheLoai" class="form-select form-select-sm">
+                    <option value="">-- Thể loại --</option>
+                    @foreach (SelectListItem item in (ViewBag.TheLoais as SelectList ?? new SelectList(Enumerable.Empty<object>())))
+                    {
+                        <option value="@item.Value" selected="@(item.Value == filter.MaTheLoai?.ToString())">@item.Text</option>
+                    }
+                </select>
+            </div>
+            <div class="col-auto">
+                <div class="form-check form-check-inline mt-1">
+                    <input class="form-check-input" type="checkbox" name="ChiConTon" value="true"
+                           id="chkTon" @(filter.ChiConTon ? "checked" : "") />
+                    <label class="form-check-label small" for="chkTon">Còn tồn kho</label>
+                </div>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-success btn-sm">
+                    <i class="bi bi-search me-1"></i>Tìm kiếm
+                </button>
+                <a asp-action="Index" class="btn btn-outline-secondary btn-sm ms-1">Xóa lọc</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Table -->
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-sm mb-0 align-middle">
+                <thead class="table-success">
+                    <tr>
+                        <th class="px-3" style="width:50px">STT</th>
+                        <th>Tên sách</th>
+                        <th>Tác giả</th>
+                        <th>Thể loại</th>
+                        <th class="text-center" style="width:90px">Tồn kho</th>
+                        <th class="text-center" style="width:90px">Trạng thái</th>
+                        <th class="text-center" style="width:130px">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Items.Any())
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                <i class="bi bi-inbox fs-4 d-block mb-1"></i>Không có sách nào.
+                            </td>
+                        </tr>
+                    }
+                    @{ int stt = (Model.Page - 1) * Model.PageSize + 1; }
+                    @foreach (var s in Model.Items)
+                    {
+                        <tr>
+                            <td class="px-3 text-muted small">@(stt++)</td>
+                            <td>
+                                <span class="fw-semibold">@s.TenSach</span>
+                                @if (!string.IsNullOrEmpty(s.ViTri))
+                                {
+                                    <br /><small class="text-muted"><i class="bi bi-geo-alt"></i> @s.ViTri</small>
+                                }
+                            </td>
+                            <td class="small">@s.TenTacGia</td>
+                            <td><span class="badge bg-secondary-subtle text-secondary border">@s.TenTheLoai</span></td>
+                            <td class="text-center">
+                                <span class="badge @(s.SoLuongTon > 0 ? "bg-success" : "bg-danger")">@s.SoLuongTon</span>
+                            </td>
+                            <td class="text-center">
+                                @if (s.TrangThai == 1)
+                                {
+                                    <span class="badge bg-success-subtle text-success border border-success">Hoạt động</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary-subtle text-secondary border">Ẩn</span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                <a asp-action="Detail" asp-route-id="@s.MaSach"
+                                   class="btn btn-outline-info btn-sm px-2" title="Chi tiết">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a asp-action="Edit" asp-route-id="@s.MaSach"
+                                   class="btn btn-outline-warning btn-sm px-2" title="Sửa">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <form asp-action="Delete" asp-route-id="@s.MaSach" method="post" class="d-inline"
+                                      onsubmit="return confirm('Ẩn sách «@s.TenSach»?')">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-outline-danger btn-sm px-2" title="Xóa">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    @if (Model.TotalPages > 1)
+    {
+        <div class="card-footer d-flex justify-content-between align-items-center py-2">
+            <small class="text-muted">Hiển thị @Model.Items.Count() / @Model.TotalCount sách</small>
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item @(!Model.HasPrev ? "disabled" : "")">
+                        <a class="page-link" asp-action="Index"
+                           asp-route-TuKhoa="@filter.TuKhoa"
+                           asp-route-MaTheLoai="@filter.MaTheLoai"
+                           asp-route-ChiConTon="@filter.ChiConTon"
+                           asp-route-Page="@(Model.Page - 1)">‹</a>
+                    </li>
+                    @for (int p = Math.Max(1, Model.Page - 2); p <= Math.Min(Model.TotalPages, Model.Page + 2); p++)
+                    {
+                        <li class="page-item @(p == Model.Page ? "active" : "")">
+                            <a class="page-link" asp-action="Index"
+                               asp-route-TuKhoa="@filter.TuKhoa"
+                               asp-route-MaTheLoai="@filter.MaTheLoai"
+                               asp-route-ChiConTon="@filter.ChiConTon"
+                               asp-route-Page="@p">@p</a>
+                        </li>
+                    }
+                    <li class="page-item @(!Model.HasNext ? "disabled" : "")">
+                        <a class="page-link" asp-action="Index"
+                           asp-route-TuKhoa="@filter.TuKhoa"
+                           asp-route-MaTheLoai="@filter.MaTheLoai"
+                           asp-route-ChiConTon="@filter.ChiConTon"
+                           asp-route-Page="@(Model.Page + 1)">›</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    }
+</div>

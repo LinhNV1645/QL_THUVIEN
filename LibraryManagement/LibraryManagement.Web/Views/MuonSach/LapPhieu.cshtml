@@ -1,0 +1,253 @@
+@{
+    ViewData["Title"] = "Lập phiếu mượn";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0"><i class="bi bi-plus-circle me-2 text-success"></i>Lập phiếu mượn</h4>
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Quay lại
+    </a>
+</div>
+
+<form method="post" asp-action="LapPhieu">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="sachJson" id="sachJson" value="[]" />
+
+    <div class="row g-3">
+        <!-- Cột trái: chọn độc giả -->
+        <div class="col-md-5">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white py-2">
+                    <i class="bi bi-person-check me-2"></i>Thông tin độc giả
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Tìm độc giả <span class="text-danger">*</span></label>
+                        <input type="text" id="docGiaSearch" class="form-control"
+                               placeholder="Nhập tên hoặc lớp để tìm..." autocomplete="off" />
+                        <div id="docGiaSuggest" class="list-group position-absolute shadow" style="z-index:100;min-width:320px;display:none"></div>
+                    </div>
+                    <input type="hidden" name="maDocGia" id="maDocGia" value="0" />
+
+                    <!-- Info độc giả sau khi chọn -->
+                    <div id="docGiaInfo" class="d-none">
+                        <div class="alert alert-success py-2 mb-0">
+                            <div class="fw-semibold" id="infoHoTen"></div>
+                            <div class="small text-muted">
+                                Lớp: <span id="infoLop"></span> &nbsp;|&nbsp;
+                                Đang mượn: <span id="infoSoSach" class="fw-bold text-danger"></span> cuốn
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ghi chú -->
+            <div class="card shadow-sm mt-3">
+                <div class="card-header py-2">
+                    <i class="bi bi-chat-left-text me-2"></i>Ghi chú
+                </div>
+                <div class="card-body">
+                    <textarea name="ghiChu" class="form-control" rows="3"
+                              placeholder="Ghi chú thêm (tuỳ chọn)..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cột phải: chọn sách -->
+        <div class="col-md-7">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white py-2 d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-book me-2"></i>Danh sách sách mượn</span>
+                    <button type="button" class="btn btn-light btn-sm" id="btnThemSach">
+                        <i class="bi bi-plus-lg me-1"></i>Thêm sách
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0" id="tblSach">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-3" style="width:50%">Sách</th>
+                                <th style="width:20%">Tồn kho</th>
+                                <th style="width:15%">Số lượng</th>
+                                <th style="width:15%"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="sachRows">
+                            <!-- rows added by JS -->
+                        </tbody>
+                    </table>
+                    <div id="emptyMsg" class="text-center text-muted py-4">
+                        <i class="bi bi-inbox fs-4 d-block mb-1"></i>
+                        Nhấn "Thêm sách" để chọn sách cần mượn.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit -->
+            <div class="d-flex justify-content-end mt-3 gap-2">
+                <a asp-action="Index" class="btn btn-outline-secondary">Hủy</a>
+                <button type="submit" class="btn btn-success" id="btnSubmit">
+                    <i class="bi bi-check-lg me-1"></i>Xác nhận lập phiếu
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+<script>
+// --- Autocomplete độc giả ---
+const docGiaSearch = document.getElementById('docGiaSearch');
+const docGiaSuggest = document.getElementById('docGiaSuggest');
+const maDocGiaInput = document.getElementById('maDocGia');
+let searchTimer;
+
+docGiaSearch.addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    const kw = docGiaSearch.value.trim();
+    if (kw.length < 2) { docGiaSuggest.style.display = 'none'; return; }
+    searchTimer = setTimeout(async () => {
+        const res = await fetch(`/MuonSach/TimDocGia?keyword=${encodeURIComponent(kw)}`);
+        const data = await res.json();
+        docGiaSuggest.innerHTML = '';
+        if (!data.length) { docGiaSuggest.style.display = 'none'; return; }
+        data.forEach(d => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'list-group-item list-group-item-action py-2';
+            btn.innerHTML = `<strong>${d.hoTen}</strong> <span class="badge bg-secondary ms-1">${d.lop}</span>`;
+            btn.addEventListener('click', () => selectDocGia(d));
+            docGiaSuggest.appendChild(btn);
+        });
+        docGiaSuggest.style.display = 'block';
+    }, 300);
+});
+
+document.addEventListener('click', e => {
+    if (!docGiaSuggest.contains(e.target) && e.target !== docGiaSearch)
+        docGiaSuggest.style.display = 'none';
+});
+
+async function selectDocGia(d) {
+    maDocGiaInput.value = d.id;
+    docGiaSearch.value = `${d.hoTen} — ${d.lop}`;
+    docGiaSuggest.style.display = 'none';
+    // load info
+    const res = await fetch(`/MuonSach/InfoDocGia?maDocGia=${d.id}`);
+    const info = await res.json();
+    if (info) {
+        document.getElementById('infoHoTen').textContent = info.hoTen;
+        document.getElementById('infoLop').textContent = info.lop || '—';
+        document.getElementById('infoSoSach').textContent = info.soSachDangMuon;
+        document.getElementById('docGiaInfo').classList.remove('d-none');
+    }
+}
+
+// --- Quản lý rows sách ---
+let rowIndex = 0;
+const sachRows = document.getElementById('sachRows');
+const emptyMsg = document.getElementById('emptyMsg');
+
+document.getElementById('btnThemSach').addEventListener('click', () => addRow());
+
+function addRow() {
+    emptyMsg.style.display = 'none';
+    const idx = rowIndex++;
+    const tr = document.createElement('tr');
+    tr.id = `row-${idx}`;
+    tr.innerHTML = `
+        <td class="ps-3">
+          <input type="text" class="form-control form-control-sm sach-search"
+                 data-idx="${idx}" placeholder="Tìm tên sách..." autocomplete="off" />
+          <input type="hidden" class="sach-id" data-idx="${idx}" value="0" />
+          <div class="sach-suggest list-group position-absolute shadow"
+               id="suggest-${idx}" style="z-index:200;min-width:280px;display:none"></div>
+        </td>
+        <td><span class="ton-kho text-muted" id="ton-${idx}">—</span></td>
+        <td>
+          <input type="number" class="form-control form-control-sm sach-qty"
+                 data-idx="${idx}" value="1" min="1" max="99" style="width:70px"/>
+        </td>
+        <td>
+          <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeRow(${idx})">
+            <i class="bi bi-trash"></i>
+          </button>
+        </td>`;
+    sachRows.appendChild(tr);
+    attachSachSearch(idx);
+    updateSachJson();
+}
+
+function removeRow(idx) {
+    document.getElementById(`row-${idx}`)?.remove();
+    if (!sachRows.children.length) emptyMsg.style.display = '';
+    updateSachJson();
+}
+
+function attachSachSearch(idx) {
+    const input = sachRows.querySelector(`.sach-search[data-idx="${idx}"]`);
+    const suggest = document.getElementById(`suggest-${idx}`);
+    let t;
+    input.addEventListener('input', () => {
+        clearTimeout(t);
+        const kw = input.value.trim();
+        if (kw.length < 2) { suggest.style.display = 'none'; return; }
+        t = setTimeout(async () => {
+            const res = await fetch(`/MuonSach/TimSach?keyword=${encodeURIComponent(kw)}`);
+            const data = await res.json();
+            suggest.innerHTML = '';
+            if (!data.length) { suggest.style.display = 'none'; return; }
+            data.forEach(s => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'list-group-item list-group-item-action py-2';
+                btn.innerHTML = `${s.tenSach} <span class="badge bg-success ms-1">Tồn: ${s.soLuongTon}</span>`;
+                btn.addEventListener('click', () => {
+                    sachRows.querySelector(`.sach-id[data-idx="${idx}"]`).value = s.id;
+                    input.value = s.tenSach;
+                    document.getElementById(`ton-${idx}`).textContent = s.soLuongTon;
+                    suggest.style.display = 'none';
+                    updateSachJson();
+                });
+                suggest.appendChild(btn);
+            });
+            suggest.style.display = 'block';
+        }, 300);
+    });
+    document.addEventListener('click', e => {
+        if (!suggest.contains(e.target) && e.target !== input)
+            suggest.style.display = 'none';
+    });
+    input.addEventListener('change', updateSachJson);
+    sachRows.querySelector(`.sach-qty[data-idx="${idx}"]`).addEventListener('change', updateSachJson);
+}
+
+function updateSachJson() {
+    const rows = sachRows.querySelectorAll('tr');
+    const items = [];
+    rows.forEach(tr => {
+        const idx = tr.id.replace('row-', '');
+        const maSach = parseInt(tr.querySelector(`.sach-id[data-idx="${idx}"]`)?.value || '0');
+        const soLuong = parseInt(tr.querySelector(`.sach-qty[data-idx="${idx}"]`)?.value || '1');
+        if (maSach > 0) items.push({ maSach, soLuong });
+    });
+    document.getElementById('sachJson').value = JSON.stringify(items);
+}
+
+// Validate trước khi submit
+document.querySelector('form').addEventListener('submit', e => {
+    updateSachJson();
+    if (parseInt(maDocGiaInput.value) < 1) {
+        e.preventDefault();
+        alert('Vui lòng chọn độc giả trước khi lập phiếu.');
+        return;
+    }
+    const items = JSON.parse(document.getElementById('sachJson').value || '[]');
+    if (!items.length) {
+        e.preventDefault();
+        alert('Vui lòng thêm ít nhất một cuốn sách.');
+    }
+});
+</script>
+}

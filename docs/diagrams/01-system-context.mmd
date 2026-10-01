@@ -1,0 +1,22 @@
+graph TB
+    classDef user fill:#4CAF50,stroke:#388E3C,color:#fff,font-size:13px
+    classDef system fill:#1565C0,stroke:#0D47A1,color:#fff,font-size:13px
+    classDef external fill:#F57C00,stroke:#E65100,color:#fff,font-size:13px
+
+    Admin["👤 Quản trị viên\n(Admin)\nQuản lý toàn bộ hệ thống"]:::user
+    NhanVien["👤 Nhân viên thư viện\n(NhanVien)\nXử lý mượn/trả sách"]:::user
+    DocGia["👤 Học sinh / Độc giả\nTra cứu sách"]:::user
+
+    System["🖥️ HỆ THỐNG QUẢN LÝ\nTHƯ VIỆN\nTHCS THANH TUÂN\n──────────────────\nASP.NET Core 8 MVC\nClean Architecture"]:::system
+
+    DB[("🗄️ SQL Server\n10.10.10.215\nDatabase: QuanLyThuVien")]:::external
+    SMTP["📧 Gmail SMTP\nsmtp.gmail.com:587\nEmail nhắc nhở"]:::external
+    Hangfire["⏰ Hangfire Scheduler\nBackground Jobs\n7:00 AM daily"]:::external
+
+    Admin -->|"Quản lý TK, cấu hình\nXem thống kê, xuất báo cáo"| System
+    NhanVien -->|"Lập phiếu mượn/trả\nGia hạn, tìm kiếm"| System
+    DocGia -->|"Tìm kiếm sách\n(không cần đăng nhập)"| System
+
+    System -->|"Lưu trữ & truy vấn\nqua EF Core + ADO.NET"| DB
+    System -->|"Gửi email nhắc\nhạn trả sách"| SMTP
+    System -->|"Điều phối jobs\nđịnh kỳ"| Hangfire

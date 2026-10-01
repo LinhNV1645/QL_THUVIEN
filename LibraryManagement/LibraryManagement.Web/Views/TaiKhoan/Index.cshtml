@@ -1,0 +1,139 @@
+@model IEnumerable<LibraryManagement.Application.DTOs.TaiKhoan.TaiKhoanDto>
+@{
+    ViewData["Title"] = "Quản lý tài khoản";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="fw-bold mb-0"><i class="bi bi-people-fill me-2 text-success"></i>Quản lý tài khoản</h4>
+    <a asp-action="Create" class="btn btn-success btn-sm">
+        <i class="bi bi-plus-lg me-1"></i>Thêm tài khoản
+    </a>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show py-2">
+        <i class="bi bi-check-circle me-1"></i>@TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show py-2">
+        <i class="bi bi-exclamation-triangle me-1"></i>@TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-sm mb-0 align-middle">
+                <thead class="table-success">
+                    <tr>
+                        <th class="px-3" style="width:50px">STT</th>
+                        <th>Tên đăng nhập</th>
+                        <th>Họ tên</th>
+                        <th>Vai trò</th>
+                        <th>Email</th>
+                        <th class="text-center">Trạng thái</th>
+                        <th class="text-center" style="width:180px">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                <i class="bi bi-inbox fs-4 d-block mb-1"></i>Chưa có tài khoản nào.
+                            </td>
+                        </tr>
+                    }
+                    @{ int stt = 1; }
+                    @foreach (var tk in Model)
+                    {
+                        <tr>
+                            <td class="px-3 text-muted small">@(stt++)</td>
+                            <td class="fw-semibold">
+                                <i class="bi bi-person-circle me-1 text-muted"></i>@tk.TenDangNhap
+                            </td>
+                            <td>@tk.HoTen</td>
+                            <td>
+                                @{
+                                    var (roleClass, roleIcon) = tk.TenVaiTro switch {
+                                        "Admin" => ("bg-danger", "bi-shield-fill"),
+                                        "NhanVien" => ("bg-primary", "bi-person-badge-fill"),
+                                        _ => ("bg-secondary", "bi-person-fill")
+                                    };
+                                }
+                                <span class="badge @roleClass">
+                                    <i class="bi @roleIcon me-1"></i>@tk.TenVaiTro
+                                </span>
+                            </td>
+                            <td class="small text-muted">@(tk.Email ?? "—")</td>
+                            <td class="text-center">
+                                @if (tk.TrangThai == 1)
+                                {
+                                    <span class="badge bg-success-subtle text-success border border-success">Hoạt động</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary-subtle text-secondary border">Vô hiệu</span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                <a asp-action="Edit" asp-route-id="@tk.MaTaiKhoan"
+                                   class="btn btn-outline-warning btn-sm px-2" title="Sửa">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+
+                                <!-- Nút đổi mật khẩu -->
+                                <button type="button" class="btn btn-outline-info btn-sm px-2"
+                                        data-bs-toggle="modal" data-bs-target="#modalMatKhau_@tk.MaTaiKhoan"
+                                        title="Đổi mật khẩu">
+                                    <i class="bi bi-key"></i>
+                                </button>
+
+                                <!-- Nút toggle trạng thái -->
+                                <form asp-action="ToggleTrangThai" asp-route-id="@tk.MaTaiKhoan" method="post" class="d-inline"
+                                      onsubmit="return confirm('@(tk.TrangThai == 1 ? "Vô hiệu hóa" : "Kích hoạt") tài khoản @tk.TenDangNhap?')">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="trangThaiHienTai" value="@tk.TrangThai" />
+                                    <button type="submit"
+                                            class="btn btn-sm px-2 @(tk.TrangThai == 1 ? "btn-outline-danger" : "btn-outline-success")"
+                                            title="@(tk.TrangThai == 1 ? "Vô hiệu hóa" : "Kích hoạt")">
+                                        <i class="bi @(tk.TrangThai == 1 ? "bi-slash-circle" : "bi-check-circle")"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+
+                        <!-- Modal đổi mật khẩu -->
+                        <div class="modal fade" id="modalMatKhau_@tk.MaTaiKhoan" tabindex="-1">
+                            <div class="modal-dialog modal-sm">
+                                <div class="modal-content">
+                                    <div class="modal-header py-2">
+                                        <h6 class="modal-title">Đổi mật khẩu — @tk.TenDangNhap</h6>
+                                        <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <form asp-action="DoiMatKhau" asp-route-id="@tk.MaTaiKhoan" method="post">
+                                        @Html.AntiForgeryToken()
+                                        <div class="modal-body py-2">
+                                            <label class="form-label small fw-semibold">Mật khẩu mới</label>
+                                            <input type="password" name="matKhauMoi" class="form-control form-control-sm"
+                                                   placeholder="Ít nhất 6 ký tự" required minlength="6" />
+                                        </div>
+                                        <div class="modal-footer py-2">
+                                            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Hủy</button>
+                                            <button type="submit" class="btn btn-info btn-sm text-white">Lưu</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

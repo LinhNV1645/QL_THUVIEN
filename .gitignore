@@ -1,0 +1,44 @@
+# VPN & sensitive configs
+TOOLS-VPN/
+TOOLS-VPN.zip
+sc02-linhnv.conf
+*.conf
+*.ovpn
+*.key
+*.pem
+*.p12
+
+# .NET build artifacts
+**/bin/
+**/obj/
+*.user
+*.suo
+.vs/
+
+# NuGet
+**/packages/
+*.nupkg
+project.lock.json
+
+# Environment & secrets
+appsettings.Development.json
+*.env
+.env*
+**/secrets.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Hangfire DB (if SQLite)
+*.db
+*.db-shm
+*.db-wal
+
+# QR Code generated files (optional — keep if want to commit)
+# LibraryManagement.Web/wwwroot/qr/

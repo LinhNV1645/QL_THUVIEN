@@ -1,0 +1,40 @@
+graph TB
+    classDef webLayer fill:#1A237E,stroke:#0D47A1,color:#fff,font-size:12px
+    classDef infraLayer fill:#1B5E20,stroke:#2E7D32,color:#fff,font-size:12px
+    classDef appLayer fill:#E65100,stroke:#BF360C,color:#fff,font-size:12px
+    classDef domainLayer fill:#4A148C,stroke:#6A1B9A,color:#fff,font-size:12px
+    classDef arrow fill:none,stroke:#555
+
+    subgraph WEB["① WEB LAYER — LibraryManagement.Web"]
+        W1["Controllers\n12 Controllers\n(Home, Login, Sach, DocGia,\nMuonSach, TraSach, GiaHan,\nTimKiem, ThongKe, TaiKhoan,\nCauHinh, DanhMuc)"]:::webLayer
+        W2["Views\n41 Razor Views\n(Bootstrap 5 + BI Icons)"]:::webLayer
+        W3["Program.cs\nDI Container\nCookie Auth\nHangfire Config"]:::webLayer
+    end
+
+    subgraph INFRA["② INFRASTRUCTURE LAYER — LibraryManagement.Infrastructure"]
+        I1["Repositories\n7 Repositories\n(EF Core LINQ + ADO.NET SP)"]:::infraLayer
+        I2["Services\nEmailService (MailKit)\nQrService (QRCoder)\nExportService (ClosedXML)"]:::infraLayer
+        I3["AppDbContext\n(EF Core 8, Fluent API\n12 DbSets)"]:::infraLayer
+        I4["Jobs\nNhacNhoHanTraJob\n(Hangfire, Cron 7AM)"]:::infraLayer
+    end
+
+    subgraph APP["③ APPLICATION LAYER — LibraryManagement.Application"]
+        A1["Interfaces\n10 Interfaces\n(ISachRepository,\nIPhieuMuonRepository,\nIEmailService, IQrService...)"]:::appLayer
+        A2["DTOs\n35 Data Transfer Objects\n(SachDto, PhieuMuonDto,\nDashboardDto, TraSachDto...)"]:::appLayer
+        A3["Common\nPaginatedResult T\n(phân trang tổng quát)"]:::appLayer
+    end
+
+    subgraph DOMAIN["④ DOMAIN LAYER — LibraryManagement.Domain"]
+        D1["Entities\n12 Entity Classes\n(Sach, DocGia, PhieuMuon,\nCTPhieuMuon, GiaHan,\nPhieuTra, TaiKhoan...)"]:::domainLayer
+        D2["Domain Exceptions\nTonKhoKhongDuException\nGioiHanMuonException\nQuaHanGiaHanException"]:::domainLayer
+    end
+
+    WEB -->|"depends on (DI injection)"| APP
+    INFRA -->|"implements interfaces"| APP
+    APP -->|"uses entities"| DOMAIN
+    INFRA -->|"maps entities"| DOMAIN
+
+    style WEB fill:#E3F2FD,stroke:#1565C0,color:#000
+    style INFRA fill:#E8F5E9,stroke:#2E7D32,color:#000
+    style APP fill:#FFF3E0,stroke:#E65100,color:#000
+    style DOMAIN fill:#F3E5F5,stroke:#6A1B9A,color:#000

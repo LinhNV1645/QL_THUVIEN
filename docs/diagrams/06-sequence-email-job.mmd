@@ -1,0 +1,31 @@
+sequenceDiagram
+    participant Cron as Hangfire Cron<br/>0 7 * * *
+    participant Job as NhacNhoHanTraJob
+    participant SP as sp_LayPhieuMuonSapDenHan
+    participant DB as SQL Server
+    participant Email as EmailService (MailKit)
+    participant SMTP as Gmail SMTP
+
+    Note over Cron: 7:00 AM mỗi ngày
+
+    Cron->>Job: Execute()
+    Job->>SP: EXEC sp_LayPhieuMuonSapDenHan @SoNgayTruoc=3
+    SP->>DB: Query PhieuMuon WHERE NgayHanTra = TODAY + 3 ngày
+    SP->>DB: JOIN DocGia để lấy Email, HoTen
+    SP->>DB: STRING_AGG(TenSach) → DanhSachSach
+    DB-->>Job: List nhắc nhở (email, tên, sách, ngày hạn)
+
+    loop Mỗi phiếu mượn sắp đến hạn
+        alt DocGia có Email
+            Job->>Email: SendNhacNhoHanTraAsync(email, hoTen, sachList, ngayHan, soNgay)
+            Email->>SMTP: STARTTLS port 587
+            SMTP-->>Email: Auth OK
+            Email->>SMTP: MIME message (HTML template)
+            SMTP-->>Email: 250 OK Message queued
+            Email-->>Job: Sent
+        else Không có email
+            Job->>Job: Bỏ qua, ghi log
+        end
+    end
+
+    Job-->>Cron: Hoàn thành, ghi vào Hangfire log

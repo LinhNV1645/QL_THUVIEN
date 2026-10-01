@@ -1,0 +1,164 @@
+@model LibraryManagement.Application.DTOs.MuonSach.PhieuMuonDetailDto
+@{
+    ViewData["Title"] = $"Phiếu mượn #{Model.MaPhieuMuon}";
+    var (badgeClass, icon) = Model.TrangThai switch {
+        1 => ("success", "bi-arrow-bar-right"),
+        2 => ("secondary", "bi-check2-circle"),
+        3 => ("danger", "bi-exclamation-triangle"),
+        4 => ("warning text-dark", "bi-clock-history"),
+        _ => ("light text-dark", "bi-question-circle")
+    };
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">
+        <i class="bi bi-file-earmark-text me-2 text-success"></i>
+        Phiếu mượn <span class="text-muted">#@Model.MaPhieuMuon</span>
+    </h4>
+    <div class="d-flex gap-2">
+        @if (Model.TrangThai == 1 || Model.TrangThai == 3 || Model.TrangThai == 4)
+        {
+            <a asp-controller="GiaHan" asp-action="Create" asp-route-maPhieu="@Model.MaPhieuMuon"
+               class="btn btn-outline-warning btn-sm">
+                <i class="bi bi-clock-history me-1"></i>Gia hạn
+            </a>
+            <a asp-controller="TraSach" asp-action="Index" asp-route-maPhieu="@Model.MaPhieuMuon"
+               class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-arrow-bar-left me-1"></i>Trả sách
+            </a>
+        }
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Quay lại
+        </a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- Thông tin phiếu mượn -->
+    <div class="col-md-5">
+        <div class="card shadow-sm">
+            <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-info-circle me-2"></i>Thông tin phiếu</span>
+                <span class="badge bg-@badgeClass">
+                    <i class="bi @icon me-1"></i>@Model.TrangThaiText
+                </span>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0 small">
+                    <dt class="col-5 text-muted">Mã phiếu</dt>
+                    <dd class="col-7 fw-semibold">#@Model.MaPhieuMuon</dd>
+
+                    <dt class="col-5 text-muted">Độc giả</dt>
+                    <dd class="col-7">
+                        <a asp-controller="DocGia" asp-action="Detail" asp-route-id="@Model.MaDocGia">
+                            @Model.TenDocGia
+                        </a>
+                    </dd>
+
+                    <dt class="col-5 text-muted">Lớp</dt>
+                    <dd class="col-7"><span class="badge bg-secondary">@Model.Lop</span></dd>
+
+                    @if (!string.IsNullOrEmpty(Model.Email))
+                    {
+                        <dt class="col-5 text-muted">Email</dt>
+                        <dd class="col-7">@Model.Email</dd>
+                    }
+
+                    <dt class="col-5 text-muted">Ngày mượn</dt>
+                    <dd class="col-7">@Model.NgayMuon.ToString("dd/MM/yyyy")</dd>
+
+                    <dt class="col-5 text-muted">Hạn trả</dt>
+                    <dd class="col-7">
+                        @Model.NgayHanTra.ToString("dd/MM/yyyy")
+                        @if (Model.SoNgayTreHan > 0)
+                        {
+                            <span class="badge bg-danger ms-1">Trễ @Model.SoNgayTreHan ngày</span>
+                        }
+                    </dd>
+
+                    <dt class="col-5 text-muted">Số sách</dt>
+                    <dd class="col-7">@Model.SoSachMuon cuốn</dd>
+
+                    @if (!string.IsNullOrEmpty(Model.GhiChu))
+                    {
+                        <dt class="col-5 text-muted">Ghi chú</dt>
+                        <dd class="col-7 fst-italic">@Model.GhiChu</dd>
+                    }
+                </dl>
+            </div>
+        </div>
+
+        <!-- Lịch sử gia hạn -->
+        @if (Model.LichSuGiaHan.Any())
+        {
+            <div class="card shadow-sm mt-3">
+                <div class="card-header py-2">
+                    <i class="bi bi-clock-history me-2 text-warning"></i>Lịch sử gia hạn
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-3">Lần</th>
+                                <th>Ngày gia hạn</th>
+                                <th>Hạn cũ</th>
+                                <th>Hạn mới</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var gh in Model.LichSuGiaHan)
+                            {
+                                <tr>
+                                    <td class="ps-3">@gh.LanGiaHan</td>
+                                    <td>@gh.NgayGiaHan.ToString("dd/MM/yyyy")</td>
+                                    <td class="text-muted text-decoration-line-through">@gh.HanTraCu.ToString("dd/MM/yyyy")</td>
+                                    <td class="fw-semibold text-success">@gh.HanTraMoi.ToString("dd/MM/yyyy")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Danh sách sách đã mượn -->
+    <div class="col-md-7">
+        <div class="card shadow-sm">
+            <div class="card-header py-2">
+                <i class="bi bi-book me-2 text-success"></i>Sách đã mượn
+                <span class="badge bg-success ms-1">@Model.DanhSachSach.Count cuốn</span>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-hover table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3" style="width:40px">#</th>
+                            <th>Tên sách</th>
+                            <th>Tác giả</th>
+                            <th>Thể loại</th>
+                            <th>Vị trí</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{int i = 1;}
+                        @foreach (var s in Model.DanhSachSach)
+                        {
+                            <tr>
+                                <td class="ps-3 text-muted">@i</td>
+                                <td>
+                                    <a asp-controller="Sach" asp-action="Detail" asp-route-id="@s.MaSach"
+                                       class="text-decoration-none fw-semibold">@s.TenSach</a>
+                                </td>
+                                <td class="text-muted small">@s.TenTacGia</td>
+                                <td><span class="badge bg-light text-dark border">@s.TenTheLoai</span></td>
+                                <td class="text-muted small">@(s.ViTri ?? "—")</td>
+                            </tr>
+                            i++;
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

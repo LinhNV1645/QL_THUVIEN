@@ -1,0 +1,151 @@
+@model DashboardDto
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="container-fluid py-4">
+    <h2 class="mb-4 fw-bold">
+        <i class="bi bi-speedometer2 me-2"></i>Dashboard Thư Viện
+    </h2>
+
+    {{-- Row 1: 4 KPI chính --}}
+    <div class="row g-3 mb-3">
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100 text-white bg-success">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="small text-white-50 text-uppercase fw-semibold">Tổng Đầu Sách</div>
+                        <div class="display-6 fw-bold">@Model.TongDauSach</div>
+                    </div>
+                    <i class="bi bi-book fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100 text-white bg-primary">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="small text-white-50 text-uppercase fw-semibold">Đang Mượn</div>
+                        <div class="display-6 fw-bold">@Model.DangMuon</div>
+                    </div>
+                    <i class="bi bi-bookmark-check fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100 text-white bg-danger">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="small text-white-50 text-uppercase fw-semibold">Quá Hạn</div>
+                        <div class="display-6 fw-bold">@Model.QuaHan</div>
+                    </div>
+                    <i class="bi bi-exclamation-triangle fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100 text-white bg-purple" style="background-color:#6f42c1!important">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="small text-white-50 text-uppercase fw-semibold">Tổng Độc Giả</div>
+                        <div class="display-6 fw-bold">@Model.TongDocGia</div>
+                    </div>
+                    <i class="bi bi-people fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Row 2: Sách tồn + Tiền phạt + Mượn tháng này --}}
+    <div class="row g-3 mb-4">
+        <div class="col-md-5">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="small text-muted text-uppercase fw-semibold mb-1">
+                        <i class="bi bi-archive me-1"></i>Tổng Sách Tồn Kho
+                    </div>
+                    <div class="h3 fw-bold mb-2">@Model.TongSachTon <span class="fs-6 text-muted">cuốn</span></div>
+                    @{
+                        int maxHienThi = Math.Max(Model.TongSachTon, 1);
+                        int muonPct = (int)Math.Round((double)Model.DangMuon / maxHienThi * 100);
+                        muonPct = Math.Min(muonPct, 100);
+                    }
+                    <div class="text-muted small mb-1">Đang mượn: @Model.DangMuon / @Model.TongSachTon cuốn (@muonPct%)</div>
+                    <div class="progress" style="height:10px">
+                        <div class="progress-bar bg-primary" style="width:@muonPct%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100 text-white" style="background-color:#fd7e14!important">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="small text-white-50 text-uppercase fw-semibold">Tiền Phạt Chưa Thu</div>
+                        <div class="h3 fw-bold">@Model.TienPhatChuaThu.ToString("N0") <span class="fs-6">đ</span></div>
+                    </div>
+                    <i class="bi bi-cash-coin fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100 text-white" style="background-color:#0dcaf0!important">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="small text-white-50 text-uppercase fw-semibold">Mượn Tháng Này</div>
+                        <div class="display-6 fw-bold">@Model.MuonTrongThang</div>
+                    </div>
+                    <i class="bi bi-calendar3 fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Row 3: Bảng quá hạn top 5 (chỉ hiển thị khi có) --}}
+    @if (Model.QuaHan > 0)
+    {
+        dynamic quaHanList = ViewBag.QuaHanList;
+        <div class="row">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm border-start border-danger border-3">
+                    <div class="card-header bg-white border-0 py-3">
+                        <h6 class="mb-0 text-danger fw-bold">
+                            <i class="bi bi-alarm me-1"></i>
+                            Top 5 Phiếu Mượn Quá Hạn Lâu Nhất
+                        </h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="ps-3">#</th>
+                                        <th>Mã Phiếu</th>
+                                        <th>Họ Tên Độc Giả</th>
+                                        <th>Hạn Trả</th>
+                                        <th>Số Ngày Quá Hạn</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @{ int stt = 1; }
+                                    @foreach (var item in quaHanList)
+                                    {
+                                        int soNgay = (DateOnly.FromDateTime(DateTime.Today).DayNumber - ((DateOnly)item.NgayHanTra).DayNumber);
+                                        <tr>
+                                            <td class="ps-3">@stt</td>
+                                            <td><span class="badge bg-secondary">#@item.MaPhieuMuon</span></td>
+                                            <td>@item.HoTen</td>
+                                            <td class="text-danger">@item.NgayHanTra.ToString("dd/MM/yyyy")</td>
+                                            <td><span class="badge bg-danger">@soNgay ngày</span></td>
+                                        </tr>
+                                        stt++;
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>

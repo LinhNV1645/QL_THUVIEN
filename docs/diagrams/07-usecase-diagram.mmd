@@ -1,0 +1,62 @@
+graph LR
+    classDef actor fill:#1565C0,stroke:#0D47A1,color:#fff,rx:50,ry:50
+    classDef uc fill:#F5F5F5,stroke:#616161,color:#212121
+    classDef ucAdmin fill:#FCE4EC,stroke:#E91E63,color:#880E4F
+    classDef ucStaff fill:#E8F5E9,stroke:#4CAF50,color:#1B5E20
+    classDef ucPublic fill:#E3F2FD,stroke:#2196F3,color:#0D47A1
+
+    Admin(("👤\nAdmin")):::actor
+    NV(("👤\nNhân viên")):::actor
+    DG(("👤\nĐộc giả")):::actor
+
+    subgraph UC_SYSTEM["HỆ THỐNG QUẢN LÝ THƯ VIỆN"]
+        subgraph UC_ADMIN["Chỉ Admin"]
+            UC1["Quản lý tài khoản\nnhân viên"]:::ucAdmin
+            UC2["Cấu hình hệ thống\n(ngày mượn, phạt...)"]:::ucAdmin
+            UC9["Xem Job Monitor\n(Hangfire Dashboard)"]:::ucAdmin
+        end
+
+        subgraph UC_STAFF["Admin + Nhân viên"]
+            UC3["Dashboard\n(7 KPI chỉ số)"]:::ucStaff
+            UC4["Quản lý kho sách\n(CRUD + QR Code)"]:::ucStaff
+            UC5["Quản lý độc giả\n(CRUD + lịch sử)"]:::ucStaff
+            UC6["Quản lý danh mục\n(Thể loại, Tác giả, NXB)"]:::ucStaff
+            UC7["Lập phiếu mượn\n(kiểm tra tồn kho)"]:::ucStaff
+            UC8["Gia hạn phiếu mượn"]:::ucStaff
+            UC10["Trả sách\n(tính tiền phạt)"]:::ucStaff
+            UC11["Thu tiền phạt"]:::ucStaff
+            UC12["Xem thống kê\n(tháng/năm)"]:::ucStaff
+            UC13["Xuất Excel\n(sách, lịch sử, thống kê)"]:::ucStaff
+        end
+
+        subgraph UC_PUBLIC["Công khai"]
+            UC14["Tìm kiếm sách\n(không cần đăng nhập)"]:::ucPublic
+        end
+    end
+
+    Admin --- UC1
+    Admin --- UC2
+    Admin --- UC9
+    Admin --- UC3
+    Admin --- UC4
+    Admin --- UC5
+    Admin --- UC6
+    Admin --- UC7
+    Admin --- UC8
+    Admin --- UC10
+    Admin --- UC11
+    Admin --- UC12
+    Admin --- UC13
+
+    NV --- UC3
+    NV --- UC4
+    NV --- UC5
+    NV --- UC6
+    NV --- UC7
+    NV --- UC8
+    NV --- UC10
+    NV --- UC11
+    NV --- UC12
+    NV --- UC13
+
+    DG --- UC14

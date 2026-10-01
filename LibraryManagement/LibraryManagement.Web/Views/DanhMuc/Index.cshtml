@@ -1,0 +1,150 @@
+@{
+    ViewData["Title"] = "Danh mục";
+    var theLoais    = ViewBag.TheLoais    as List<TheLoai>    ?? new();
+    var tacGias     = ViewBag.TacGias     as List<TacGia>     ?? new();
+    var nhaXuatBans = ViewBag.NhaXuatBans as List<NhaXuatBan> ?? new();
+}
+
+<h4 class="fw-bold mb-3"><i class="bi bi-tags me-2 text-success"></i>Quản lý danh mục</h4>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show py-2" role="alert">
+        <i class="bi bi-check-circle me-1"></i>@TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show py-2" role="alert">
+        <i class="bi bi-exclamation-triangle me-1"></i>@TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="row g-3">
+
+    <!-- Thể loại -->
+    <div class="col-md-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-success text-white py-2 d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-bookmark me-1"></i>Thể loại</span>
+                <span class="badge bg-white text-success">@theLoais.Count</span>
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush" style="max-height:340px;overflow-y:auto">
+                    @if (!theLoais.Any())
+                    {
+                        <li class="list-group-item text-muted small text-center py-3">Chưa có thể loại.</li>
+                    }
+                    @foreach (var tl in theLoais)
+                    {
+                        <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
+                            <span class="small">@tl.TenTheLoai</span>
+                            <form asp-action="DeleteTheLoai" asp-route-id="@tl.MaTheLoai" method="post"
+                                  onsubmit="return confirm('Xóa thể loại «@tl.TenTheLoai»?')">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-outline-danger btn-sm px-2 py-0" title="Xóa">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </li>
+                    }
+                </ul>
+            </div>
+            <div class="card-footer p-2">
+                <form asp-action="AddTheLoai" method="post" class="d-flex gap-2">
+                    @Html.AntiForgeryToken()
+                    <input type="text" name="tenTheLoai" class="form-control form-control-sm"
+                           placeholder="Tên thể loại mới..." required maxlength="100" />
+                    <button type="submit" class="btn btn-success btn-sm px-3">
+                        <i class="bi bi-plus-lg"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tác giả -->
+    <div class="col-md-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-success text-white py-2 d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-person-lines-fill me-1"></i>Tác giả</span>
+                <span class="badge bg-white text-success">@tacGias.Count</span>
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush" style="max-height:340px;overflow-y:auto">
+                    @if (!tacGias.Any())
+                    {
+                        <li class="list-group-item text-muted small text-center py-3">Chưa có tác giả.</li>
+                    }
+                    @foreach (var tg in tacGias)
+                    {
+                        <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
+                            <span class="small">@tg.TenTacGia</span>
+                            <form asp-action="DeleteTacGia" asp-route-id="@tg.MaTacGia" method="post"
+                                  onsubmit="return confirm('Xóa tác giả «@tg.TenTacGia»?')">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-outline-danger btn-sm px-2 py-0" title="Xóa">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </li>
+                    }
+                </ul>
+            </div>
+            <div class="card-footer p-2">
+                <form asp-action="AddTacGia" method="post" class="d-flex gap-2">
+                    @Html.AntiForgeryToken()
+                    <input type="text" name="tenTacGia" class="form-control form-control-sm"
+                           placeholder="Tên tác giả mới..." required maxlength="150" />
+                    <button type="submit" class="btn btn-success btn-sm px-3">
+                        <i class="bi bi-plus-lg"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Nhà xuất bản -->
+    <div class="col-md-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-success text-white py-2 d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-building me-1"></i>Nhà xuất bản</span>
+                <span class="badge bg-white text-success">@nhaXuatBans.Count</span>
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush" style="max-height:340px;overflow-y:auto">
+                    @if (!nhaXuatBans.Any())
+                    {
+                        <li class="list-group-item text-muted small text-center py-3">Chưa có NXB.</li>
+                    }
+                    @foreach (var nxb in nhaXuatBans)
+                    {
+                        <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
+                            <span class="small">@nxb.TenNXB</span>
+                            <form asp-action="DeleteNXB" asp-route-id="@nxb.MaNXB" method="post"
+                                  onsubmit="return confirm('Xóa NXB «@nxb.TenNXB»?')">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-outline-danger btn-sm px-2 py-0" title="Xóa">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </li>
+                    }
+                </ul>
+            </div>
+            <div class="card-footer p-2">
+                <form asp-action="AddNXB" method="post" class="d-flex gap-2">
+                    @Html.AntiForgeryToken()
+                    <input type="text" name="tenNXB" class="form-control form-control-sm"
+                           placeholder="Tên NXB mới..." required maxlength="150" />
+                    <button type="submit" class="btn btn-success btn-sm px-3">
+                        <i class="bi bi-plus-lg"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+</div>

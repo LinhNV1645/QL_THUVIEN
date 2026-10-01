@@ -1,0 +1,119 @@
+@model SachDto
+@{
+    ViewData["Title"] = "Chi tiết sách";
+}
+
+<div class="d-flex align-items-center mb-3 gap-2">
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i>
+    </a>
+    <h4 class="fw-bold mb-0"><i class="bi bi-book me-2 text-success"></i>Chi tiết sách</h4>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success py-2"><i class="bi bi-check-circle me-1"></i>@TempData["Success"]</div>
+}
+
+<div class="row g-3">
+    <!-- Thông tin sách -->
+    <div class="col-md-8">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-success text-white py-2">
+                <i class="bi bi-info-circle me-1"></i>Thông tin sách
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4 text-muted small">Tên sách</dt>
+                    <dd class="col-sm-8 fw-semibold">@Model.TenSach</dd>
+
+                    <dt class="col-sm-4 text-muted small">Thể loại</dt>
+                    <dd class="col-sm-8"><span class="badge bg-secondary">@Model.TenTheLoai</span></dd>
+
+                    <dt class="col-sm-4 text-muted small">Tác giả</dt>
+                    <dd class="col-sm-8">@Model.TenTacGia</dd>
+
+                    <dt class="col-sm-4 text-muted small">Nhà xuất bản</dt>
+                    <dd class="col-sm-8">@Model.TenNXB</dd>
+
+                    <dt class="col-sm-4 text-muted small">Năm xuất bản</dt>
+                    <dd class="col-sm-8">@(Model.NamXuatBan?.ToString() ?? "—")</dd>
+
+                    <dt class="col-sm-4 text-muted small">Vị trí</dt>
+                    <dd class="col-sm-8">@(Model.ViTri ?? "—")</dd>
+
+                    <dt class="col-sm-4 text-muted small">Số lượng nhập</dt>
+                    <dd class="col-sm-8">@Model.SoLuongNhap</dd>
+
+                    <dt class="col-sm-4 text-muted small">Tồn kho</dt>
+                    <dd class="col-sm-8">
+                        <span class="badge @(Model.SoLuongTon > 0 ? "bg-success" : "bg-danger") fs-6">
+                            @Model.SoLuongTon cuốn
+                        </span>
+                    </dd>
+
+                    <dt class="col-sm-4 text-muted small">Trạng thái</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.TrangThai == 1)
+                        {
+                            <span class="badge bg-success">Hoạt động</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">Đã ẩn</span>
+                        }
+                    </dd>
+
+                    @if (!string.IsNullOrEmpty(Model.MoTa))
+                    {
+                        <dt class="col-sm-4 text-muted small">Mô tả</dt>
+                        <dd class="col-sm-8 text-muted small">@Model.MoTa</dd>
+                    }
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <!-- QR Code -->
+    <div class="col-md-4">
+        <div class="card shadow-sm text-center">
+            <div class="card-header bg-success text-white py-2">
+                <i class="bi bi-qr-code me-1"></i>Mã QR
+            </div>
+            <div class="card-body">
+                @if (!string.IsNullOrEmpty(Model.MaQR))
+                {
+                    <img src="/Sach/QrImage/@Model.MaQR"
+                         alt="QR @Model.MaQR"
+                         class="img-fluid border rounded"
+                         style="max-width:200px" />
+                    <p class="mt-2 mb-0 text-muted small font-monospace">@Model.MaQR</p>
+                }
+                else
+                {
+                    <div class="text-muted py-4">
+                        <i class="bi bi-qr-code fs-1 d-block mb-2"></i>
+                        Chưa có mã QR
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Actions -->
+<div class="mt-3 d-flex gap-2">
+    <a asp-action="Edit" asp-route-id="@Model.MaSach" class="btn btn-warning">
+        <i class="bi bi-pencil me-1"></i>Chỉnh sửa
+    </a>
+    <form asp-action="Delete" asp-route-id="@Model.MaSach" method="post"
+          onsubmit="return confirm('Ẩn sách này khỏi hệ thống?')">
+        @Html.AntiForgeryToken()
+        <button type="submit" class="btn btn-outline-danger">
+            <i class="bi bi-trash me-1"></i>Ẩn sách
+        </button>
+    </form>
+    <a asp-action="Index" class="btn btn-outline-secondary ms-auto">
+        <i class="bi bi-list me-1"></i>Danh sách
+    </a>
+</div>

@@ -1,0 +1,106 @@
+erDiagram
+    TheLoai {
+        int MaTheLoai PK
+        nvarchar TenTheLoai UK
+    }
+    TacGia {
+        int MaTacGia PK
+        nvarchar TenTacGia
+    }
+    NhaXuatBan {
+        int MaNXB PK
+        nvarchar TenNXB
+    }
+    Sach {
+        int MaSach PK
+        int MaTheLoai FK
+        int MaTacGia FK
+        int MaNXB FK
+        nvarchar TenSach
+        smallint NamXuatBan
+        int SoLuongNhap
+        int SoLuongTon
+        nvarchar ViTri
+        nvarchar MaQR UK
+        date NgayNhap
+        tinyint TrangThai
+    }
+    VaiTro {
+        int MaVaiTro PK
+        nvarchar TenVaiTro
+    }
+    DocGia {
+        int MaDocGia PK
+        nvarchar HoTen
+        nvarchar Lop
+        date NgaySinh
+        bit GioiTinh
+        nvarchar Email
+        nvarchar SoDienThoai
+        date NgayDangKy
+        tinyint TrangThai
+    }
+    TaiKhoan {
+        int MaTaiKhoan PK
+        int MaVaiTro FK
+        int MaDocGia FK
+        nvarchar TenDangNhap UK
+        nvarchar MatKhau
+        nvarchar HoTen
+        nvarchar Email
+        datetime NgayTao
+        tinyint TrangThai
+    }
+    PhieuMuon {
+        int MaPhieuMuon PK
+        int MaDocGia FK
+        date NgayMuon
+        date NgayHanTra
+        tinyint TrangThai
+        int NhanVienLap
+        nvarchar GhiChu
+    }
+    CTPhieuMuon {
+        int MaCT PK
+        int MaPhieuMuon FK
+        int MaSach FK
+        int SoLuongMuon
+        tinyint TrangThaiCT
+    }
+    GiaHan {
+        int MaGiaHan PK
+        int MaPhieuMuon FK
+        date NgayGiaHan
+        date HanTraCu
+        date HanTraMoi
+        tinyint LanGiaHan
+        int NhanVienDuyet
+    }
+    PhieuTra {
+        int MaPhieuTra PK
+        int MaPhieuMuon FK
+        date NgayTra
+        int SoNgayMuon
+        int SoNgayTreHan
+        numeric TienPhat
+        int DaThuPhat
+        tinyint TrangThaiSach
+        int NhanVienThu
+    }
+    CauHinhHeThong {
+        int MaCauHinh PK
+        nvarchar TenCauHinh UK
+        nvarchar GiaTri
+        nvarchar GhiChu
+    }
+
+    TheLoai ||--o{ Sach : "phân loại"
+    TacGia ||--o{ Sach : "viết"
+    NhaXuatBan ||--o{ Sach : "xuất bản"
+    VaiTro ||--o{ TaiKhoan : "có vai trò"
+    DocGia ||--o{ TaiKhoan : "liên kết"
+    DocGia ||--o{ PhieuMuon : "mượn sách"
+    PhieuMuon ||--o{ CTPhieuMuon : "chứa"
+    Sach ||--o{ CTPhieuMuon : "được mượn"
+    PhieuMuon ||--o{ GiaHan : "gia hạn"
+    PhieuMuon ||--o| PhieuTra : "được trả"

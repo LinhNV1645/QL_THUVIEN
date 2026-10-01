@@ -1,0 +1,165 @@
+@model LibraryManagement.Application.Common.PaginatedResult<LibraryManagement.Application.DTOs.MuonSach.PhieuMuonDto>
+@{
+    ViewData["Title"] = "Danh sách phiếu mượn";
+    var filter = ViewBag.Filter as LibraryManagement.Application.DTOs.MuonSach.PhieuMuonFilterDto
+                 ?? new LibraryManagement.Application.DTOs.MuonSach.PhieuMuonFilterDto();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0"><i class="bi bi-arrow-bar-right me-2 text-success"></i>Phiếu mượn</h4>
+    <div class="d-flex gap-2">
+        <a asp-action="QuaHan" class="btn btn-outline-danger btn-sm">
+            <i class="bi bi-exclamation-triangle me-1"></i>Quá hạn
+        </a>
+        <a asp-action="LapPhieu" class="btn btn-success btn-sm">
+            <i class="bi bi-plus-lg me-1"></i>Lập phiếu mượn
+        </a>
+    </div>
+</div>
+
+<!-- Bộ lọc -->
+<div class="card shadow-sm mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small mb-1">Trạng thái</label>
+                <select name="TrangThai" class="form-select form-select-sm">
+                    <option value="">Tất cả</option>
+                    <option value="1" selected="@(filter.TrangThai == 1)">Đang mượn</option>
+                    <option value="2" selected="@(filter.TrangThai == 2)">Đã trả</option>
+                    <option value="3" selected="@(filter.TrangThai == 3)">Quá hạn</option>
+                    <option value="4" selected="@(filter.TrangThai == 4)">Gia hạn</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-1">Từ ngày</label>
+                <input type="date" name="TuNgay" class="form-control form-control-sm"
+                       value="@filter.TuNgay?.ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-1">Đến ngày</label>
+                <input type="date" name="DenNgay" class="form-control form-control-sm"
+                       value="@filter.DenNgay?.ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small mb-1">Mã độc giả</label>
+                <input type="number" name="MaDocGia" class="form-control form-control-sm"
+                       placeholder="Nhập mã độc giả..." value="@filter.MaDocGia" />
+            </div>
+            <div class="col-md-2 d-flex gap-1">
+                <button type="submit" class="btn btn-primary btn-sm flex-grow-1">
+                    <i class="bi bi-funnel me-1"></i>Lọc
+                </button>
+                <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-x-lg"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Bảng danh sách -->
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover table-sm mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-3">STT</th>
+                    <th>Mã phiếu</th>
+                    <th>Độc giả</th>
+                    <th>Lớp</th>
+                    <th>Ngày mượn</th>
+                    <th>Hạn trả</th>
+                    <th>Trạng thái</th>
+                    <th class="text-center">Số sách</th>
+                    <th class="text-end pe-3">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model == null || Model.TotalCount == 0)
+                {
+                    <tr>
+                        <td colspan="9" class="text-center text-muted py-4">
+                            <i class="bi bi-inbox fs-4 d-block mb-1"></i>Không có phiếu mượn nào.
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    int stt = (Model.Page - 1) * Model.PageSize + 1;
+                    foreach (var p in Model.Items)
+                    {
+                        <tr>
+                            <td class="ps-3 text-muted">@stt</td>
+                            <td><span class="fw-semibold">#@p.MaPhieuMuon</span></td>
+                            <td>@p.TenDocGia</td>
+                            <td><span class="badge bg-secondary">@p.Lop</span></td>
+                            <td>@p.NgayMuon.ToString("dd/MM/yyyy")</td>
+                            <td>@p.NgayHanTra.ToString("dd/MM/yyyy")</td>
+                            <td>
+                                @{
+                                    var (badgeClass, icon) = p.TrangThai switch {
+                                        1 => ("success", "bi-arrow-bar-right"),
+                                        2 => ("secondary", "bi-check2-circle"),
+                                        3 => ("danger", "bi-exclamation-triangle"),
+                                        4 => ("warning text-dark", "bi-clock-history"),
+                                        _ => ("light text-dark", "bi-question-circle")
+                                    };
+                                }
+                                <span class="badge bg-@badgeClass">
+                                    <i class="bi @icon me-1"></i>@p.TrangThaiText
+                                </span>
+                                @if (p.SoNgayTreHan > 0)
+                                {
+                                    <small class="text-danger ms-1">+@p.SoNgayTreHan ngày</small>
+                                }
+                            </td>
+                            <td class="text-center">@p.SoSachMuon</td>
+                            <td class="text-end pe-3">
+                                <a asp-action="Detail" asp-route-id="@p.MaPhieuMuon"
+                                   class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        stt++;
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+    @if (Model != null && Model.TotalPages > 1)
+    {
+        <div class="card-footer d-flex justify-content-between align-items-center py-2">
+            <small class="text-muted">
+                Hiển thị @((Model.Page-1)*Model.PageSize+1)–@Math.Min(Model.Page*Model.PageSize, Model.TotalCount)
+                / @Model.TotalCount phiếu
+            </small>
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item @(!Model.HasPrev ? "disabled" : "")">
+                        <a class="page-link" asp-action="Index"
+                           asp-route-page="@(Model.Page-1)"
+                           asp-route-trangThai="@filter.TrangThai"
+                           asp-route-maDocGia="@filter.MaDocGia">‹</a>
+                    </li>
+                    @for (int i = Math.Max(1, Model.Page - 2); i <= Math.Min(Model.TotalPages, Model.Page + 2); i++)
+                    {
+                        <li class="page-item @(i == Model.Page ? "active" : "")">
+                            <a class="page-link" asp-action="Index"
+                               asp-route-page="@i"
+                               asp-route-trangThai="@filter.TrangThai"
+                               asp-route-maDocGia="@filter.MaDocGia">@i</a>
+                        </li>
+                    }
+                    <li class="page-item @(!Model.HasNext ? "disabled" : "")">
+                        <a class="page-link" asp-action="Index"
+                           asp-route-page="@(Model.Page+1)"
+                           asp-route-trangThai="@filter.TrangThai"
+                           asp-route-maDocGia="@filter.MaDocGia">›</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    }
+</div>

@@ -1,0 +1,162 @@
+@model LibraryManagement.Application.Common.PaginatedResult<LibraryManagement.Application.DTOs.Sach.SachDto>?
+@{
+    ViewData["Title"] = "Tìm kiếm sách";
+    var filter = ViewBag.Filter as LibraryManagement.Application.DTOs.Sach.SachFilterDto
+                 ?? new LibraryManagement.Application.DTOs.Sach.SachFilterDto();
+    bool hasResult = Model != null;
+}
+
+<!-- Search hero -->
+<div class="card shadow-sm mb-4 border-0 bg-success text-white">
+    <div class="card-body py-4 px-4">
+        <h4 class="mb-1"><i class="bi bi-search me-2"></i>Tìm kiếm sách</h4>
+        <p class="mb-3 opacity-75 small">Tra cứu sách theo tên, tác giả, thể loại hoặc nhà xuất bản.</p>
+        <form method="get" class="row g-2">
+            <div class="col-md-5">
+                <input type="text" name="TuKhoa" class="form-control form-control-lg shadow-sm"
+                       placeholder="Nhập tên sách, tác giả..." value="@filter.TuKhoa" autofocus />
+            </div>
+            <div class="col-md-3">
+                <select name="MaTheLoai" class="form-select form-select-lg shadow-sm">
+                    <option value="">-- Tất cả thể loại --</option>
+                    @if (ViewBag.TheLoais != null)
+                    {
+                        foreach (var item in (Microsoft.AspNetCore.Mvc.Rendering.SelectList)ViewBag.TheLoais)
+                        {
+                            <option value="@item.Value"
+                                    selected="@(item.Value == filter.MaTheLoai?.ToString())">
+                                @item.Text
+                            </option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-center">
+                <div class="form-check form-check-reverse text-white ms-2">
+                    <input class="form-check-input" type="checkbox" name="ChiConTon" value="true"
+                           id="chkTon" @(filter.ChiConTon ? "checked" : "") />
+                    <label class="form-check-label" for="chkTon">Chỉ còn tồn kho</label>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-light btn-lg w-100 fw-semibold text-success shadow-sm">
+                    <i class="bi bi-search me-1"></i>Tìm kiếm
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Kết quả -->
+@if (!hasResult)
+{
+    <div class="text-center text-muted py-5">
+        <i class="bi bi-book-half fs-1 d-block mb-2 text-success opacity-50"></i>
+        <p class="mb-0">Nhập từ khoá để bắt đầu tìm kiếm sách trong thư viện.</p>
+    </div>
+}
+else if (Model!.TotalCount == 0)
+{
+    <div class="alert alert-warning d-flex align-items-center">
+        <i class="bi bi-emoji-frown me-2 fs-5"></i>
+        <span>Không tìm thấy sách nào phù hợp với từ khoá <strong>"@filter.TuKhoa"</strong>. Hãy thử từ khoá khác.</span>
+    </div>
+}
+else
+{
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="text-muted small">
+            Tìm thấy <strong>@Model.TotalCount</strong> cuốn sách
+            @if (!string.IsNullOrWhiteSpace(filter.TuKhoa))
+            { <span> cho "<em>@filter.TuKhoa</em>"</span> }
+        </span>
+        <small class="text-muted">Trang @Model.Page / @Model.TotalPages</small>
+    </div>
+
+    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3 mb-3">
+        @foreach (var s in Model.Items)
+        {
+            <div class="col">
+                <div class="card h-100 shadow-sm border-0">
+                    <div class="card-body">
+                        <h6 class="card-title mb-1 fw-bold">@s.TenSach</h6>
+                        <p class="card-text text-muted small mb-2">
+                            <i class="bi bi-person me-1"></i>@s.TenTacGia
+                        </p>
+                        <div class="d-flex flex-wrap gap-1 mb-2">
+                            <span class="badge bg-light text-dark border">
+                                <i class="bi bi-tag me-1"></i>@s.TenTheLoai
+                            </span>
+                            <span class="badge bg-light text-dark border">
+                                <i class="bi bi-building me-1"></i>@s.TenNXB
+                            </span>
+                            @if (s.NamXuatBan.HasValue)
+                            {
+                                <span class="badge bg-light text-dark border">@s.NamXuatBan</span>
+                            }
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(s.MoTa))
+                        {
+                            <p class="small text-muted mb-2" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">
+                                @s.MoTa
+                            </p>
+                        }
+                    </div>
+                    <div class="card-footer bg-transparent d-flex justify-content-between align-items-center">
+                        @if (s.SoLuongTon > 0)
+                        {
+                            <span class="badge bg-success">
+                                <i class="bi bi-check-circle me-1"></i>Còn @s.SoLuongTon cuốn
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-danger">
+                                <i class="bi bi-x-circle me-1"></i>Hết sách
+                            </span>
+                        }
+                        @if (!string.IsNullOrEmpty(s.ViTri))
+                        {
+                            <small class="text-muted">
+                                <i class="bi bi-geo-alt me-1"></i>@s.ViTri
+                            </small>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Phân trang -->
+    @if (Model.TotalPages > 1)
+    {
+        <nav class="d-flex justify-content-center">
+            <ul class="pagination">
+                <li class="page-item @(!Model.HasPrev ? "disabled" : "")">
+                    <a class="page-link" asp-action="Index"
+                       asp-route-page="@(Model.Page-1)"
+                       asp-route-tuKhoa="@filter.TuKhoa"
+                       asp-route-maTheLoai="@filter.MaTheLoai"
+                       asp-route-chiConTon="@filter.ChiConTon">‹</a>
+                </li>
+                @for (int pg = Math.Max(1, Model.Page - 2); pg <= Math.Min(Model.TotalPages, Model.Page + 2); pg++)
+                {
+                    <li class="page-item @(pg == Model.Page ? "active" : "")">
+                        <a class="page-link" asp-action="Index"
+                           asp-route-page="@pg"
+                           asp-route-tuKhoa="@filter.TuKhoa"
+                           asp-route-maTheLoai="@filter.MaTheLoai"
+                           asp-route-chiConTon="@filter.ChiConTon">@pg</a>
+                    </li>
+                }
+                <li class="page-item @(!Model.HasNext ? "disabled" : "")">
+                    <a class="page-link" asp-action="Index"
+                       asp-route-page="@(Model.Page+1)"
+                       asp-route-tuKhoa="@filter.TuKhoa"
+                       asp-route-maTheLoai="@filter.MaTheLoai"
+                       asp-route-chiConTon="@filter.ChiConTon">›</a>
+                </li>
+            </ul>
+        </nav>
+    }
+}

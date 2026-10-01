@@ -1,0 +1,96 @@
+@model CreateSachDto
+@{
+    ViewData["Title"] = "Thêm sách mới";
+}
+
+<div class="d-flex align-items-center mb-3 gap-2">
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i>
+    </a>
+    <h4 class="fw-bold mb-0"><i class="bi bi-book-half me-2 text-success"></i>Thêm sách mới</h4>
+</div>
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger py-2"><i class="bi bi-exclamation-triangle me-1"></i>@TempData["Error"]</div>
+}
+
+<div class="card shadow-sm" style="max-width:720px">
+    <div class="card-body">
+        <form asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+            <div class="row g-3">
+                <div class="col-12">
+                    <label asp-for="TenSach" class="form-label fw-semibold">Tên sách <span class="text-danger">*</span></label>
+                    <input asp-for="TenSach" class="form-control" placeholder="Nhập tên sách..." />
+                    <span asp-validation-for="TenSach" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-6">
+                    <label asp-for="MaTheLoai" class="form-label fw-semibold">Thể loại <span class="text-danger">*</span></label>
+                    <select asp-for="MaTheLoai" asp-items="ViewBag.TheLoais" class="form-select">
+                        <option value="">-- Chọn thể loại --</option>
+                    </select>
+                    <span asp-validation-for="MaTheLoai" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-6">
+                    <label asp-for="MaTacGia" class="form-label fw-semibold">Tác giả <span class="text-danger">*</span></label>
+                    <select asp-for="MaTacGia" asp-items="ViewBag.TacGias" class="form-select">
+                        <option value="">-- Chọn tác giả --</option>
+                    </select>
+                    <span asp-validation-for="MaTacGia" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-6">
+                    <label asp-for="MaNXB" class="form-label fw-semibold">Nhà xuất bản <span class="text-danger">*</span></label>
+                    <select asp-for="MaNXB" asp-items="ViewBag.NhaXuatBans" class="form-select">
+                        <option value="">-- Chọn NXB --</option>
+                    </select>
+                    <span asp-validation-for="MaNXB" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-3">
+                    <label asp-for="NamXuatBan" class="form-label fw-semibold">Năm xuất bản</label>
+                    <input asp-for="NamXuatBan" type="number" class="form-control" min="1900" max="2100" placeholder="VD: 2023" />
+                    <span asp-validation-for="NamXuatBan" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-3">
+                    <label asp-for="SoTrang" class="form-label fw-semibold">Số trang</label>
+                    <input asp-for="SoTrang" type="number" class="form-control" min="1" placeholder="VD: 300" />
+                    <span asp-validation-for="SoTrang" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-4">
+                    <label asp-for="SoLuongNhap" class="form-label fw-semibold">Số lượng nhập <span class="text-danger">*</span></label>
+                    <input asp-for="SoLuongNhap" type="number" class="form-control" min="1" />
+                    <span asp-validation-for="SoLuongNhap" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-8">
+                    <label asp-for="ViTri" class="form-label fw-semibold">Vị trí kệ sách</label>
+                    <input asp-for="ViTri" class="form-control" placeholder="VD: Kệ A - Tầng 2" />
+                    <span asp-validation-for="ViTri" class="text-danger small"></span>
+                </div>
+
+                <div class="col-12">
+                    <label asp-for="MoTa" class="form-label fw-semibold">Mô tả</label>
+                    <textarea asp-for="MoTa" class="form-control" rows="3" placeholder="Mô tả ngắn về nội dung sách..."></textarea>
+                    <span asp-validation-for="MoTa" class="text-danger small"></span>
+                </div>
+
+                <div class="col-12 d-flex gap-2">
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-lg me-1"></i>Lưu sách
+                    </button>
+                    <a asp-action="Index" class="btn btn-outline-secondary">Hủy</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

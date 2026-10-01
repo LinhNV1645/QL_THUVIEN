@@ -1,0 +1,145 @@
+@model LibraryManagement.Application.DTOs.TraSach.PhieuTraDto
+@using LibraryManagement.Application.DTOs.TraSach
+@{
+    ViewData["Title"] = $"Phiếu trả #{Model.MaPhieuTra}";
+    var ketQua = ViewBag.KetQua as TraSachResultDto;
+    var (ttLabel, ttClass) = Model.TrangThaiSach switch {
+        2 => ("Hư hỏng", "warning"),
+        3 => ("Mất", "danger"),
+        _ => ("Bình thường", "success")
+    };
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="fw-bold mb-0">
+        <i class="bi bi-file-earmark-check me-2 text-success"></i>
+        Phiếu trả #@Model.MaPhieuTra
+    </h4>
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Quay lại
+    </a>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show py-2">
+        <i class="bi bi-check-circle me-1"></i>@TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show py-2">
+        <i class="bi bi-exclamation-triangle me-1"></i>@TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (ketQua != null && ketQua.TienPhat > 0)
+{
+    <div class="alert alert-warning d-flex align-items-center gap-3 mb-3">
+        <i class="bi bi-exclamation-triangle-fill fs-4"></i>
+        <div>
+            <strong>Sách trả trễ @ketQua.SoNgayTreHan ngày — Tiền phạt: @ketQua.TienPhat.ToString("N0") đồng</strong>
+            <div class="small">Vui lòng thu phạt trước khi hoàn tất.</div>
+        </div>
+    </div>
+}
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-success-subtle fw-semibold">
+                <i class="bi bi-info-circle me-1"></i>Thông tin phiếu trả
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-borderless mb-0">
+                    <tr>
+                        <td class="text-muted" style="width:45%">Mã phiếu trả</td>
+                        <td class="fw-semibold">#@Model.MaPhieuTra</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Mã phiếu mượn</td>
+                        <td>
+                            <a asp-controller="MuonSach" asp-action="Detail" asp-route-id="@Model.MaPhieuMuon">
+                                #@Model.MaPhieuMuon
+                            </a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Độc giả</td>
+                        <td class="fw-semibold">@Model.TenDocGia</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Ngày trả thực tế</td>
+                        <td>@Model.NgayTra.ToString("dd/MM/yyyy")</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Số ngày mượn</td>
+                        <td>@Model.SoNgayMuon ngày</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Số ngày trễ hạn</td>
+                        <td>
+                            @if (Model.SoNgayTreHan > 0)
+                            {
+                                <span class="badge bg-danger">+@Model.SoNgayTreHan ngày</span>
+                            }
+                            else
+                            {
+                                <span class="text-success"><i class="bi bi-check-circle"></i> Đúng hạn</span>
+                            }
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Tình trạng sách</td>
+                        <td><span class="badge bg-@ttClass">@ttLabel</span></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-success-subtle fw-semibold">
+                <i class="bi bi-cash-coin me-1"></i>Thông tin phạt
+            </div>
+            <div class="card-body">
+                @if (Model.TienPhat > 0)
+                {
+                    <div class="fs-3 fw-bold text-danger text-center my-3">
+                        @Model.TienPhat.ToString("N0") <small class="fs-6">đồng</small>
+                    </div>
+                    @if (Model.DaThuPhat)
+                    {
+                        <div class="alert alert-success text-center py-2 mb-0">
+                            <i class="bi bi-check-circle-fill me-1"></i>
+                            <strong>Đã thu phạt</strong>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-warning text-center py-2 mb-2">
+                            <i class="bi bi-clock-history me-1"></i>Chưa thu phạt
+                        </div>
+                        <form asp-action="ThuPhat" asp-route-id="@Model.MaPhieuTra" method="post"
+                              onsubmit="return confirm('Xác nhận đã thu @Model.TienPhat.ToString("N0") đồng tiền phạt?')">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-warning w-100">
+                                <i class="bi bi-cash-coin me-1"></i>Thu phạt
+                            </button>
+                        </form>
+                    }
+                }
+                else
+                {
+                    <div class="alert alert-success text-center py-3 mb-0">
+                        <i class="bi bi-emoji-smile fs-4 d-block mb-1"></i>
+                        Không có tiền phạt
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,97 @@
+@model IEnumerable<LibraryManagement.Application.DTOs.CauHinh.CauHinhDto>
+@{
+    ViewData["Title"] = "Cấu hình hệ thống";
+
+    // Mô tả thân thiện cho từng key cấu hình
+    var moTa = new Dictionary<string, (string Label, string Icon, string Hint)>
+    {
+        ["SoNgayMuonMacDinh"]   = ("Số ngày mượn mặc định",     "bi-calendar-week",  "Số ngày được phép mượn sách mỗi lần (VD: 14)"),
+        ["SoSachMuonToiDa"]     = ("Số sách mượn tối đa",        "bi-book-stack",     "Số cuốn sách tối đa một độc giả có thể mượn cùng lúc"),
+        ["SoLanGiaHanToiDa"]    = ("Số lần gia hạn tối đa",      "bi-arrow-repeat",   "Mỗi phiếu mượn được gia hạn tối đa bao nhiêu lần"),
+        ["TienPhatMoiNgay"]     = ("Tiền phạt mỗi ngày trễ",     "bi-cash-coin",      "Số tiền phạt (đồng) tính cho mỗi ngày trả trễ"),
+        ["SoNgayGiaHan"]        = ("Số ngày gia hạn thêm",       "bi-calendar-plus",  "Số ngày được cộng thêm khi gia hạn"),
+    };
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="fw-bold mb-0"><i class="bi bi-gear-fill me-2 text-success"></i>Cấu hình hệ thống</h4>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show py-2">
+        <i class="bi bi-check-circle me-1"></i>@TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show py-2">
+        <i class="bi bi-exclamation-triangle me-1"></i>@TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<form asp-action="Update" method="post">
+    @Html.AntiForgeryToken()
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-success-subtle fw-semibold">
+            <i class="bi bi-sliders me-1"></i>Thông số hệ thống
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-hover table-sm mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th class="px-3" style="width:40%">Tên cấu hình</th>
+                        <th style="width:20%">Giá trị</th>
+                        <th>Mô tả</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="3" class="text-center text-muted py-4">
+                                <i class="bi bi-inbox fs-4 d-block mb-1"></i>Chưa có cấu hình nào.
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var ch in Model)
+                    {
+                        var info = moTa.TryGetValue(ch.TenCauHinh, out var v)
+                            ? v
+                            : (Label: ch.TenCauHinh, Icon: "bi-gear", Hint: ch.GhiChu ?? "");
+
+                        <tr>
+                            <td class="px-3">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi @info.Icon text-success fs-5"></i>
+                                    <div>
+                                        <div class="fw-semibold">@info.Label</div>
+                                        <code class="small text-muted">@ch.TenCauHinh</code>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <input type="text"
+                                       name="values[@ch.TenCauHinh]"
+                                       value="@ch.GiaTri"
+                                       class="form-control form-control-sm"
+                                       style="width:100px" />
+                            </td>
+                            <td class="text-muted small">
+                                @(string.IsNullOrWhiteSpace(info.Hint) ? ch.GhiChu ?? "—" : info.Hint)
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="card-footer d-flex justify-content-end py-2">
+            <button type="submit" class="btn btn-success">
+                <i class="bi bi-save me-1"></i>Lưu tất cả
+            </button>
+        </div>
+    </div>
+</form>

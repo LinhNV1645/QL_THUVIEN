@@ -1,0 +1,44 @@
+sequenceDiagram
+    actor NV as Nhân viên
+    participant UI as Browser (View)
+    participant Ctrl as TraSachController
+    participant Repo as PhieuTraRepository
+    participant SP as sp_TraSach
+    participant DB as SQL Server
+
+    NV->>UI: Truy cập /TraSach/LapPhieu?maPhieuMuon=X
+    UI->>Ctrl: GET LapPhieu(maPhieuMuon)
+    Ctrl->>DB: Load PhieuMuon + DocGia info
+    DB-->>Ctrl: PhieuMuon detail
+    Ctrl-->>UI: Hiển thị form trả sách
+
+    NV->>UI: Chọn tình trạng sách + ghi chú
+    UI->>Ctrl: POST LapPhieu (maPhieuMuon, trangThaiSach)
+
+    Ctrl->>Repo: TraSachAsync(dto)
+    Repo->>SP: EXEC sp_TraSach @MaPhieuMuon, @TrangThaiSach
+
+    SP->>DB: Tính SoNgayTreHan = MAX(0, NgayTra - NgayHanTra)
+    SP->>DB: TienPhat = SoNgayTreHan × MucPhatMoiNgay
+
+    alt Sách hư hỏng (TrangThaiSach = 2)
+        SP->>SP: TienPhat += 50,000đ
+    else Sách mất (TrangThaiSach = 3)
+        SP->>SP: TienPhat += 200,000đ
+    end
+
+    SP->>DB: BEGIN TRANSACTION
+    SP->>DB: INSERT INTO PhieuTra → @MaPhieuTra OUTPUT
+    SP->>DB: UPDATE PhieuMuon.TrangThai = 2 (Đã trả)
+    SP->>DB: UPDATE CTPhieuMuon.TrangThaiCT = 2
+
+    alt Sách không bị mất
+        SP->>DB: UPDATE Sach.SoLuongTon += SoLuongMuon
+        Note over SP,DB: Hoàn trả tồn kho
+    end
+
+    SP->>DB: COMMIT
+    SP-->>Repo: MaPhieuTra, TienPhat, SoNgayTreHan
+    Repo-->>Ctrl: TraSachResultDto
+    Ctrl-->>UI: Redirect Detail + hiển thị tiền phạt
+    UI-->>NV: Thông báo phạt + phiếu trả

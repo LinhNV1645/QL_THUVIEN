@@ -1,0 +1,150 @@
+@model PaginatedResult<DocGiaDto>
+@{
+    ViewData["Title"] = "Quản lý độc giả";
+    var keyword = ViewBag.Keyword as string;
+    var lop = ViewBag.Lop as string;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="fw-bold mb-0"><i class="bi bi-people me-2 text-success"></i>Quản lý độc giả</h4>
+    <a asp-action="Create" class="btn btn-success btn-sm">
+        <i class="bi bi-plus-lg me-1"></i>Thêm độc giả
+    </a>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show py-2" role="alert">
+        <i class="bi bi-check-circle me-1"></i>@TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show py-2" role="alert">
+        <i class="bi bi-exclamation-triangle me-1"></i>@TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<!-- Search bar -->
+<div class="card shadow-sm mb-3">
+    <div class="card-body py-2">
+        <form method="get" asp-action="Index" class="row g-2 align-items-end">
+            <div class="col-md-5">
+                <input type="text" name="keyword" value="@keyword"
+                       class="form-control form-control-sm" placeholder="Tìm theo tên độc giả..." />
+            </div>
+            <div class="col-md-3">
+                <input type="text" name="lop" value="@lop"
+                       class="form-control form-control-sm" placeholder="Lớp (VD: 6A1)" />
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-success btn-sm">
+                    <i class="bi bi-search me-1"></i>Tìm kiếm
+                </button>
+                <a asp-action="Index" class="btn btn-outline-secondary btn-sm ms-1">Xóa lọc</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Table -->
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-sm mb-0 align-middle">
+                <thead class="table-success">
+                    <tr>
+                        <th class="px-3" style="width:50px">STT</th>
+                        <th>Họ tên</th>
+                        <th style="width:80px">Lớp</th>
+                        <th>Email</th>
+                        <th style="width:120px">Số ĐT</th>
+                        <th style="width:110px">Ngày đăng ký</th>
+                        <th class="text-center" style="width:90px">Trạng thái</th>
+                        <th class="text-center" style="width:130px">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Items.Any())
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-4">
+                                <i class="bi bi-inbox fs-4 d-block mb-1"></i>Không có độc giả nào.
+                            </td>
+                        </tr>
+                    }
+                    @{ int stt = (Model.Page - 1) * Model.PageSize + 1; }
+                    @foreach (var dg in Model.Items)
+                    {
+                        <tr>
+                            <td class="px-3 text-muted small">@(stt++)</td>
+                            <td class="fw-semibold">@dg.HoTen</td>
+                            <td class="small">@(dg.Lop ?? "—")</td>
+                            <td class="small text-muted">@(dg.Email ?? "—")</td>
+                            <td class="small">@(dg.SoDienThoai ?? "—")</td>
+                            <td class="small">@dg.NgayDangKy.ToString("dd/MM/yyyy")</td>
+                            <td class="text-center">
+                                @if (dg.TrangThai == 1)
+                                {
+                                    <span class="badge bg-success-subtle text-success border border-success">Hoạt động</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger-subtle text-danger border border-danger">Đã khóa</span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                <a asp-action="Detail" asp-route-id="@dg.MaDocGia"
+                                   class="btn btn-outline-info btn-sm px-2" title="Chi tiết">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a asp-action="Edit" asp-route-id="@dg.MaDocGia"
+                                   class="btn btn-outline-warning btn-sm px-2" title="Sửa">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <form asp-action="ToggleTrangThai" asp-route-id="@dg.MaDocGia" method="post" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit"
+                                            class="btn btn-sm px-2 @(dg.TrangThai == 1 ? "btn-outline-secondary" : "btn-outline-success")"
+                                            title="@(dg.TrangThai == 1 ? "Khóa" : "Kích hoạt")">
+                                        <i class="bi @(dg.TrangThai == 1 ? "bi-lock" : "bi-unlock")"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    @if (Model.TotalPages > 1)
+    {
+        <div class="card-footer d-flex justify-content-between align-items-center py-2">
+            <small class="text-muted">Hiển thị @Model.Items.Count() / @Model.TotalCount độc giả</small>
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item @(!Model.HasPrev ? "disabled" : "")">
+                        <a class="page-link" asp-action="Index"
+                           asp-route-keyword="@keyword" asp-route-lop="@lop"
+                           asp-route-page="@(Model.Page - 1)">‹</a>
+                    </li>
+                    @for (int p = Math.Max(1, Model.Page - 2); p <= Math.Min(Model.TotalPages, Model.Page + 2); p++)
+                    {
+                        <li class="page-item @(p == Model.Page ? "active" : "")">
+                            <a class="page-link" asp-action="Index"
+                               asp-route-keyword="@keyword" asp-route-lop="@lop"
+                               asp-route-page="@p">@p</a>
+                        </li>
+                    }
+                    <li class="page-item @(!Model.HasNext ? "disabled" : "")">
+                        <a class="page-link" asp-action="Index"
+                           asp-route-keyword="@keyword" asp-route-lop="@lop"
+                           asp-route-page="@(Model.Page + 1)">›</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    }
+</div>

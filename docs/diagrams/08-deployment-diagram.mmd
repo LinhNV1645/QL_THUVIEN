@@ -1,0 +1,39 @@
+graph TB
+    classDef client fill:#1565C0,stroke:#0D47A1,color:#fff
+    classDef vpn fill:#2E7D32,stroke:#1B5E20,color:#fff
+    classDef server fill:#4A148C,stroke:#6A1B9A,color:#fff
+    classDef db fill:#B71C1C,stroke:#7F0000,color:#fff
+    classDef ext fill:#E65100,stroke:#BF360C,color:#fff
+
+    subgraph CLIENT["Máy khách"]
+        Browser["🌐 Web Browser\nChrome / Edge / Firefox\nHTTPS"]:::client
+    end
+
+    subgraph VPN_NET["WireGuard VPN Tunnel\n45.122.253.200:51820 → 10.60.10.x"]
+        VPN_GW["🔒 VPN Gateway\nWireGuard\nInterface: utun4"]:::vpn
+    end
+
+    subgraph WEB_SERVER["Máy chủ ứng dụng"]
+        direction TB
+        Kestrel["🖥️ ASP.NET Core 8\nKestrel Web Server\nPort: 5000 / 443"]:::server
+        AppLayer["📦 Application\nClean Architecture\n4 Layers"]:::server
+        Hangfire_Server["⏰ Hangfire Server\nBackground Worker\nCron: 0 7 * * *"]:::server
+        QR_Storage["📁 wwwroot/qr/\nQR Code Images\nPNG files"]:::server
+    end
+
+    subgraph DB_SERVER["SQL Server - Mạng nội bộ"]
+        SQLServer["🗄️ SQL Server 2019+\n10.10.10.215:1433\nDatabase: QuanLyThuVien\n─────────────────────\n12 Tables\n8 Stored Procedures\n5 Views\n2 Triggers\n6 Indexes"]:::db
+    end
+
+    subgraph EXTERNAL["Dịch vụ ngoài"]
+        Gmail["📧 Gmail SMTP\nsmtp.gmail.com:587\nTLS/STARTTLS\nEmail nhắc hạn trả"]:::ext
+    end
+
+    Browser -->|"HTTPS"| VPN_GW
+    VPN_GW -->|"Tunnel → Port 5000"| Kestrel
+    Kestrel --- AppLayer
+    Kestrel --- Hangfire_Server
+    Kestrel --- QR_Storage
+    AppLayer -->|"TCP 1433\nEF Core + ADO.NET"| SQLServer
+    Hangfire_Server -->|"Đọc lịch\nHangfire tables"| SQLServer
+    Hangfire_Server -->|"TLS Port 587"| Gmail

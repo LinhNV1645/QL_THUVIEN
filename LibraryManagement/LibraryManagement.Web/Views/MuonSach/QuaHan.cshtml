@@ -1,0 +1,113 @@
+@model IEnumerable<LibraryManagement.Application.DTOs.MuonSach.PhieuMuonQuaHanDto>
+@{
+    ViewData["Title"] = "Phiếu mượn quá hạn";
+    var list = Model?.ToList() ?? [];
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">
+        <i class="bi bi-exclamation-triangle me-2 text-danger"></i>Phiếu mượn quá hạn
+        @if (list.Any())
+        {
+            <span class="badge bg-danger ms-1">@list.Count</span>
+        }
+    </h4>
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Quay lại danh sách
+    </a>
+</div>
+
+@if (!list.Any())
+{
+    <div class="card shadow-sm">
+        <div class="card-body text-center py-5 text-muted">
+            <i class="bi bi-check-circle fs-1 text-success d-block mb-2"></i>
+            <h6>Không có phiếu mượn nào quá hạn!</h6>
+            <p class="small mb-0">Tất cả độc giả đang trả sách đúng hạn.</p>
+        </div>
+    </div>
+}
+else
+{
+    <div class="alert alert-danger d-flex align-items-center py-2 mb-3">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <span>Có <strong>@list.Count</strong> phiếu mượn quá hạn. Vui lòng liên hệ độc giả để nhắc trả sách.</span>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <table class="table table-hover table-sm mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3">STT</th>
+                        <th>Mã phiếu</th>
+                        <th>Độc giả</th>
+                        <th>Lớp</th>
+                        <th>Email</th>
+                        <th>Hạn trả</th>
+                        <th class="text-center">Số ngày trễ</th>
+                        <th class="text-end">Tiền phạt (ước tính)</th>
+                        <th class="text-end pe-3">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{ int stt = 1; }
+                    @foreach (var p in list.OrderByDescending(x => x.SoNgayTre))
+                    {
+                        var urgency = p.SoNgayTre switch {
+                            > 14 => "table-danger",
+                            > 7  => "table-warning",
+                            _    => ""
+                        };
+                        <tr class="@urgency">
+                            <td class="ps-3 text-muted">@stt</td>
+                            <td>
+                                <a asp-action="Detail" asp-route-id="@p.MaPhieuMuon"
+                                   class="fw-semibold text-decoration-none">#@p.MaPhieuMuon</a>
+                            </td>
+                            <td class="fw-semibold">@p.TenDocGia</td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(p.Lop))
+                                {
+                                    <span class="badge bg-secondary">@p.Lop</span>
+                                }
+                                else { <span class="text-muted">—</span> }
+                            </td>
+                            <td class="small">
+                                @if (!string.IsNullOrEmpty(p.Email))
+                                {
+                                    <a href="mailto:@p.Email" class="text-decoration-none">@p.Email</a>
+                                }
+                                else { <span class="text-muted">—</span> }
+                            </td>
+                            <td>@p.NgayHanTra.ToString("dd/MM/yyyy")</td>
+                            <td class="text-center">
+                                <span class="badge bg-danger fs-6">@p.SoNgayTre</span>
+                            </td>
+                            <td class="text-end fw-semibold text-danger">
+                                @p.TienPhatUocTinh.ToString("N0") đ
+                            </td>
+                            <td class="text-end pe-3">
+                                <a asp-controller="TraSach" asp-action="Index"
+                                   asp-route-maPhieu="@p.MaPhieuMuon"
+                                   class="btn btn-sm btn-outline-primary" title="Trả sách">
+                                    <i class="bi bi-arrow-bar-left"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        stt++;
+                    }
+                </tbody>
+                <tfoot class="table-light">
+                    <tr>
+                        <td colspan="7" class="ps-3 fw-semibold text-end">Tổng tiền phạt ước tính:</td>
+                        <td class="text-end fw-bold text-danger">
+                            @list.Sum(x => x.TienPhatUocTinh).ToString("N0") đ
+                        </td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+}

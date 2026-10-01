@@ -1,0 +1,82 @@
+@model UpdateDocGiaDto
+@{
+    ViewData["Title"] = "Chỉnh sửa độc giả";
+}
+
+<div class="d-flex align-items-center mb-3 gap-2">
+    <a asp-action="Detail" asp-route-id="@Model.MaDocGia" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i>
+    </a>
+    <h4 class="fw-bold mb-0"><i class="bi bi-person-gear me-2 text-warning"></i>Chỉnh sửa độc giả</h4>
+</div>
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger py-2"><i class="bi bi-exclamation-triangle me-1"></i>@TempData["Error"]</div>
+}
+
+<div class="card shadow-sm" style="max-width:640px">
+    <div class="card-body">
+        <form asp-action="Edit" asp-route-id="@Model.MaDocGia" method="post">
+            @Html.AntiForgeryToken()
+            <input asp-for="MaDocGia" type="hidden" />
+            <div class="row g-3">
+                <div class="col-12">
+                    <label asp-for="HoTen" class="form-label fw-semibold">Họ tên <span class="text-danger">*</span></label>
+                    <input asp-for="HoTen" class="form-control" />
+                    <span asp-validation-for="HoTen" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-4">
+                    <label asp-for="Lop" class="form-label fw-semibold">Lớp</label>
+                    <input asp-for="Lop" class="form-control" placeholder="VD: 6A1" />
+                    <span asp-validation-for="Lop" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-4">
+                    <label asp-for="NgaySinh" class="form-label fw-semibold">Ngày sinh</label>
+                    <input asp-for="NgaySinh" type="date" class="form-control" />
+                    <span asp-validation-for="NgaySinh" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Giới tính</label>
+                    <select asp-for="GioiTinh" class="form-select">
+                        <option value="">-- Chọn --</option>
+                        <option value="true">Nam</option>
+                        <option value="false">Nữ</option>
+                    </select>
+                </div>
+
+                <div class="col-md-6">
+                    <label asp-for="Email" class="form-label fw-semibold">Email</label>
+                    <input asp-for="Email" type="email" class="form-control" />
+                    <span asp-validation-for="Email" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-6">
+                    <label asp-for="SoDienThoai" class="form-label fw-semibold">Số điện thoại</label>
+                    <input asp-for="SoDienThoai" class="form-control" />
+                    <span asp-validation-for="SoDienThoai" class="text-danger small"></span>
+                </div>
+
+                <div class="col-12">
+                    <label asp-for="DiaChi" class="form-label fw-semibold">Địa chỉ</label>
+                    <input asp-for="DiaChi" class="form-control" />
+                    <span asp-validation-for="DiaChi" class="text-danger small"></span>
+                </div>
+
+                <div class="col-12 d-flex gap-2">
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-check-lg me-1"></i>Cập nhật
+                    </button>
+                    <a asp-action="Detail" asp-route-id="@Model.MaDocGia" class="btn btn-outline-secondary">Hủy</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

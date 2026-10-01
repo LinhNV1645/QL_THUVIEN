@@ -1,0 +1,40 @@
+sequenceDiagram
+    actor NV as Nhân viên
+    participant UI as Browser (View)
+    participant Ctrl as MuonSachController
+    participant Repo as PhieuMuonRepository
+    participant SP as sp_LapPhieuMuon
+    participant DB as SQL Server
+
+    NV->>UI: Truy cập /MuonSach/LapPhieu
+    UI->>Ctrl: GET LapPhieu
+    Ctrl->>DB: Load danh sách độc giả (AJAX)
+    DB-->>Ctrl: DocGia list
+    Ctrl-->>UI: Hiển thị form
+
+    NV->>UI: Chọn độc giả + thêm sách
+    UI->>Ctrl: POST LapPhieu (maDocGia, sachJson, ghiChu)
+
+    Ctrl->>Repo: LapPhieuMuonAsync(dto)
+    Repo->>SP: EXEC sp_LapPhieuMuon @JSON
+
+    SP->>DB: Kiểm tra DocGia.TrangThai = 1
+    SP->>DB: Kiểm tra số sách đang mượn ≤ SoSachMuonToiDa
+    SP->>DB: Kiểm tra Sach.SoLuongTon ≥ SoLuong yêu cầu
+
+    alt Tồn kho không đủ
+        SP-->>Repo: THROW 50003 - Không đủ tồn kho
+        Repo-->>Ctrl: Exception
+        Ctrl-->>UI: TempData["Error"] + Redirect
+        UI-->>NV: Hiển thị lỗi tồn kho
+    else Hợp lệ
+        SP->>DB: BEGIN TRANSACTION
+        SP->>DB: INSERT INTO PhieuMuon → @MaPhieuMuon OUTPUT
+        SP->>DB: INSERT INTO CTPhieuMuon (chi tiết sách)
+        SP->>DB: UPDATE Sach SET SoLuongTon = SoLuongTon - SoLuong
+        SP->>DB: COMMIT
+        SP-->>Repo: MaPhieuMuon
+        Repo-->>Ctrl: maPhieuMuon
+        Ctrl-->>UI: RedirectToAction("Detail", id=maPhieuMuon)
+        UI-->>NV: Hiển thị chi tiết phiếu mượn
+    end
