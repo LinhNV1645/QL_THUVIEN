@@ -27,10 +27,7 @@ public class TraSachController(
     {
         if (maPhieuMuon.HasValue)
         {
-            var phieuMuon = await _db.PhieuMuons
-                .Include(pm => pm.DocGia)
-                .Include(pm => pm.CTPhieuMuons).ThenInclude(ct => ct.Sach)
-                .FirstOrDefaultAsync(pm => pm.MaPhieuMuon == maPhieuMuon.Value);
+            var phieuMuon = await phieuMuonRepo.GetByIdAsync(maPhieuMuon.Value);
             ViewBag.PhieuMuon = phieuMuon;
             ViewBag.MucPhat = phieuMuon == null ? 0 : await LayMucPhatAsync();
         }

@@ -1,8 +1,10 @@
 using LibraryManagement.Application.DTOs.MuonSach;
 using LibraryManagement.Application.DTOs.Sach;
 using LibraryManagement.Application.Interfaces;
+using LibraryManagement.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using System.Text.Json;
 
@@ -12,7 +14,8 @@ namespace LibraryManagement.Web.Controllers;
 public class MuonSachController(
     IPhieuMuonRepository phieuMuonRepo,
     ISachRepository sachRepo,
-    IDocGiaRepository docGiaRepo) : Controller
+    IDocGiaRepository docGiaRepo,
+    AppDbContext db) : Controller
 {
     // GET /MuonSach
     public async Task<IActionResult> Index(PhieuMuonFilterDto filter)
@@ -151,22 +154,27 @@ public class MuonSachController(
     [HttpGet]
     public async Task<IActionResult> LichSuDocGia(int maDocGia)
     {
-        var list = await _db.PhieuMuons
+        // Evaluate to memory first — EF Core không dịch được DateOnly.ToString và string.Join
+        var raw = await db.PhieuMuons
             .Include(p => p.CTPhieuMuons).ThenInclude(ct => ct.Sach)
             .Where(p => p.MaDocGia == maDocGia)
             .OrderByDescending(p => p.NgayMuon)
             .Take(10)
-            .Select(p => new
-            {
-                maPhieuMuon = p.MaPhieuMuon,
-                ngayMuon    = p.NgayMuon.ToString("dd/MM/yyyy"),
-                ngayHanTra  = p.NgayHanTra.ToString("dd/MM/yyyy"),
-                trangThai   = p.TrangThai == 0 ? "Đã trả" : p.TrangThai == 1 ? "Đang mượn" :
-                              p.TrangThai == 2 ? "Quá hạn" : p.TrangThai == 3 ? "Đã xử lý" : "Gia hạn",
-                soSach      = p.CTPhieuMuons.Count,
-                sachNames   = string.Join(", ", p.CTPhieuMuons.Select(ct => ct.Sach.TenSach))
-            })
             .ToListAsync();
+
+        var list = raw.Select(p => new
+        {
+            maPhieuMuon = p.MaPhieuMuon,
+            ngayMuon    = p.NgayMuon.ToString("dd/MM/yyyy"),
+            ngayHanTra  = p.NgayHanTra.ToString("dd/MM/yyyy"),
+            trangThai   = p.TrangThai switch
+            {
+                0 => "Đã trả", 1 => "Đang mượn",
+                2 => "Quá hạn", 3 => "Đã xử lý", _ => "Gia hạn"
+            },
+            soSach    = p.CTPhieuMuons.Count,
+            sachNames = string.Join(", ", p.CTPhieuMuons.Select(ct => ct.Sach?.TenSach ?? ""))
+        });
 
         return Json(list);
     }
