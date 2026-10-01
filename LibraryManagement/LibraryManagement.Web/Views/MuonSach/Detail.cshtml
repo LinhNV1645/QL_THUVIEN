@@ -1,10 +1,12 @@
 @model LibraryManagement.Application.DTOs.MuonSach.PhieuMuonDetailDto
 @{
     ViewData["Title"] = $"Phiếu mượn #{Model.MaPhieuMuon}";
+    bool chuaTra = Model.TrangThai is 1 or 3 or 4;
+    bool quaHan = chuaTra && Model.SoNgayTreHan > 0;
     var (badgeClass, icon) = Model.TrangThai switch {
-        1 => ("success", "bi-arrow-bar-right"),
         2 => ("secondary", "bi-check2-circle"),
-        3 => ("danger", "bi-exclamation-triangle"),
+        _ when quaHan => ("danger", "bi-exclamation-triangle"),
+        1 => ("success", "bi-arrow-bar-right"),
         4 => ("warning text-dark", "bi-clock-history"),
         _ => ("light text-dark", "bi-question-circle")
     };
@@ -16,13 +18,16 @@
         Phiếu mượn <span class="text-muted">#@Model.MaPhieuMuon</span>
     </h4>
     <div class="d-flex gap-2">
-        @if (Model.TrangThai == 1 || Model.TrangThai == 3 || Model.TrangThai == 4)
+        @if (chuaTra)
         {
-            <a asp-controller="GiaHan" asp-action="Create" asp-route-maPhieu="@Model.MaPhieuMuon"
-               class="btn btn-outline-warning btn-sm">
-                <i class="bi bi-clock-history me-1"></i>Gia hạn
-            </a>
-            <a asp-controller="TraSach" asp-action="Index" asp-route-maPhieu="@Model.MaPhieuMuon"
+            if (!quaHan)
+            {
+                <a asp-controller="GiaHan" asp-action="Index" asp-route-maPhieuMuon="@Model.MaPhieuMuon"
+                   class="btn btn-outline-warning btn-sm">
+                    <i class="bi bi-clock-history me-1"></i>Gia hạn
+                </a>
+            }
+            <a asp-controller="TraSach" asp-action="LapPhieu" asp-route-maPhieuMuon="@Model.MaPhieuMuon"
                class="btn btn-outline-primary btn-sm">
                 <i class="bi bi-arrow-bar-left me-1"></i>Trả sách
             </a>

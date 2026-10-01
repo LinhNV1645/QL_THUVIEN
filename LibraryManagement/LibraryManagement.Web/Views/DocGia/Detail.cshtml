@@ -11,11 +11,6 @@
     <h4 class="fw-bold mb-0"><i class="bi bi-person-circle me-2 text-success"></i>Chi tiết độc giả</h4>
 </div>
 
-@if (TempData["Success"] != null)
-{
-    <div class="alert alert-success py-2"><i class="bi bi-check-circle me-1"></i>@TempData["Success"]</div>
-}
-
 <!-- Thông tin cơ bản -->
 <div class="card shadow-sm mb-3" style="max-width:640px">
     <div class="card-header bg-success text-white py-2">
@@ -31,6 +26,15 @@
 
             <dt class="col-sm-4 text-muted small">Lớp</dt>
             <dd class="col-sm-8">@(Model.Lop ?? "—")</dd>
+
+            <dt class="col-sm-4 text-muted small">Ngày sinh</dt>
+            <dd class="col-sm-8">@(Model.NgaySinh?.ToString("dd/MM/yyyy") ?? "—")</dd>
+
+            <dt class="col-sm-4 text-muted small">Giới tính</dt>
+            <dd class="col-sm-8">@(Model.GioiTinh switch { true => "Nam", false => "Nữ", _ => "—" })</dd>
+
+            <dt class="col-sm-4 text-muted small">Địa chỉ</dt>
+            <dd class="col-sm-8">@(Model.DiaChi ?? "—")</dd>
 
             <dt class="col-sm-4 text-muted small">Email</dt>
             <dd class="col-sm-8">@(Model.Email ?? "—")</dd>
@@ -111,7 +115,7 @@
                             </td>
                             <td class="small">@(ls.NgayTra?.ToString("dd/MM/yyyy") ?? "—")</td>
                             <td>
-                                <span class="badge @(ls.TinhTrangTra == "Đúng hạn" ? "bg-success-subtle text-success border border-success" :
+                                <span class="badge @(ls.TinhTrangTra == "Đã trả" ? "bg-success-subtle text-success border border-success" :
                                                      ls.TinhTrangTra == "Quá hạn" ? "bg-danger-subtle text-danger border border-danger" :
                                                      "bg-warning-subtle text-warning border border-warning")">
                                     @ls.TinhTrangTra

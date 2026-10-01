@@ -1,4 +1,5 @@
 using System.Data;
+using System.Globalization;
 using System.Text.Json;
 using LibraryManagement.Application.Common;
 using LibraryManagement.Application.DTOs.MuonSach;
@@ -12,32 +13,47 @@ namespace LibraryManagement.Infrastructure.Repositories;
 
 public class PhieuMuonRepository(AppDbContext db) : IPhieuMuonRepository
 {
+    // Trạng thái phiếu còn giữ sách: 1=Đang mượn, 3=Quá hạn, 4=Đã gia hạn
+    private static readonly byte[] TrangThaiChuaTra = [1, 3, 4];
+
     // ── gọi SP với OUTPUT param ──────────────────────────────────────────────
     public async Task<int> LapPhieuMuonAsync(LapPhieuMuonDto dto)
     {
-        var json = JsonSerializer.Serialize(dto.DanhSachSach.Select(x => new { x.MaSach, x.SoLuong }));
+        var danhSach = dto.DanhSachSach
+            .Where(x => x.MaSach > 0)
+            .GroupBy(x => x.MaSach)
+            .Select(g => new { MaSach = g.Key, SoLuong = g.Sum(x => x.SoLuong) });
+        var json = JsonSerializer.Serialize(danhSach);
 
         await db.Database.OpenConnectionAsync();
-        using var cmd = (SqlCommand)db.Database.GetDbConnection().CreateCommand();
-        cmd.CommandType    = CommandType.StoredProcedure;
-        cmd.CommandText    = "sp_LapPhieuMuon";
-        cmd.Parameters.AddWithValue("@MaDocGia",    dto.MaDocGia);
-        cmd.Parameters.AddWithValue("@DanhSachSach", json);
-        cmd.Parameters.AddWithValue("@NhanVienLap", dto.NhanVienLap);
-        if (dto.GhiChu != null) cmd.Parameters.AddWithValue("@GhiChu", dto.GhiChu);
+        try
+        {
+            using var cmd = (SqlCommand)db.Database.GetDbConnection().CreateCommand();
+            cmd.CommandType = CommandType.StoredProcedure;
+            cmd.CommandText = "sp_LapPhieuMuon";
+            cmd.Parameters.AddWithValue("@MaDocGia",     dto.MaDocGia);
+            cmd.Parameters.AddWithValue("@DanhSachSach", json);
+            cmd.Parameters.AddWithValue("@NhanVienLap",  dto.NhanVienLap);
+            cmd.Parameters.AddWithValue("@GhiChu",
+                string.IsNullOrWhiteSpace(dto.GhiChu) ? DBNull.Value : dto.GhiChu.Trim());
 
-        var outParam = new SqlParameter("@MaPhieuMuon", SqlDbType.Int)
-            { Direction = ParameterDirection.Output };
-        cmd.Parameters.Add(outParam);
+            var outParam = new SqlParameter("@MaPhieuMuon", SqlDbType.Int)
+                { Direction = ParameterDirection.Output };
+            cmd.Parameters.Add(outParam);
 
-        await cmd.ExecuteNonQueryAsync();
-        db.Database.CloseConnection();
-        return (int)outParam.Value;
+            await cmd.ExecuteNonQueryAsync();
+            return (int)outParam.Value;
+        }
+        finally
+        {
+            await db.Database.CloseConnectionAsync();
+        }
     }
 
     public async Task<PhieuMuonDetailDto?> GetByIdAsync(int maPhieu)
     {
         var p = await db.PhieuMuons
+            .AsNoTracking()
             .Include(x => x.DocGia)
             .Include(x => x.CTPhieuMuons).ThenInclude(ct => ct.Sach)
                 .ThenInclude(s => s.TheLoai)
@@ -50,30 +66,33 @@ public class PhieuMuonRepository(AppDbContext db) : IPhieuMuonRepository
 
         if (p is null) return null;
 
-        var soNgayTre = Math.Max(0,
-            DateOnly.FromDateTime(DateTime.Today).DayNumber - p.NgayHanTra.DayNumber);
+        var today = DateOnly.FromDateTime(DateTime.Today);
 
         return new PhieuMuonDetailDto
         {
-            MaPhieuMuon  = p.MaPhieuMuon,
-            MaDocGia     = p.MaDocGia,
-            TenDocGia    = p.DocGia.HoTen,
-            Lop          = p.DocGia.Lop ?? "",
-            Email        = p.DocGia.Email,
-            NgayMuon     = p.NgayMuon,
-            NgayHanTra   = p.NgayHanTra,
-            TrangThai    = p.TrangThai,
-            TrangThaiText = MapTrangThai(p.TrangThai),
-            SoNgayTreHan = soNgayTre,
-            SoSachMuon   = p.CTPhieuMuons.Count,
-            GhiChu       = p.GhiChu,
+            MaPhieuMuon   = p.MaPhieuMuon,
+            MaDocGia      = p.MaDocGia,
+            TenDocGia     = p.DocGia.HoTen,
+            Lop           = p.DocGia.Lop ?? "",
+            Email         = p.DocGia.Email,
+            NgayMuon      = p.NgayMuon,
+            NgayHanTra    = p.NgayHanTra,
+            TrangThai     = p.TrangThai,
+            TrangThaiText = MapTrangThai(p.TrangThai, p.NgayHanTra, today),
+            SoNgayTreHan  = SoNgayTre(p.TrangThai, p.NgayHanTra, today),
+            SoSachMuon    = p.CTPhieuMuons.Sum(ct => ct.SoLuongMuon),
+            GhiChu        = p.GhiChu,
             DanhSachSach  = p.CTPhieuMuons.Select(ct => new SachDto
             {
-                MaSach     = ct.Sach.MaSach, TenSach   = ct.Sach.TenSach,
+                MaSach     = ct.Sach.MaSach,
+                TenSach    = ct.Sach.TenSach,
                 TenTheLoai = ct.Sach.TheLoai.TenTheLoai,
                 TenTacGia  = ct.Sach.TacGia.TenTacGia,
                 TenNXB     = ct.Sach.NhaXuatBan.TenNXB,
-                SoLuongTon = ct.Sach.SoLuongTon, TrangThai = ct.Sach.TrangThai
+                ViTri      = ct.Sach.ViTri,
+                MaQR       = ct.Sach.MaQR,
+                SoLuongTon = ct.Sach.SoLuongTon,
+                TrangThai  = ct.Sach.TrangThai
             }).ToList(),
             LichSuGiaHan = p.GiaHans.OrderBy(g => g.LanGiaHan).Select(g => new GiaHanDto
             {
@@ -86,88 +105,134 @@ public class PhieuMuonRepository(AppDbContext db) : IPhieuMuonRepository
 
     public async Task<PaginatedResult<PhieuMuonDto>> GetAllAsync(PhieuMuonFilterDto filter)
     {
-        var q = db.PhieuMuons
-            .Include(p => p.DocGia)
-            .Include(p => p.CTPhieuMuons)
-            .AsQueryable();
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var page     = Math.Max(1, filter.Page);
+        var pageSize = Math.Clamp(filter.PageSize, 1, 200);
 
-        if (filter.MaDocGia.HasValue)  q = q.Where(p => p.MaDocGia   == filter.MaDocGia.Value);
-        if (filter.TrangThai.HasValue) q = q.Where(p => p.TrangThai  == filter.TrangThai.Value);
-        if (filter.TuNgay.HasValue)    q = q.Where(p => p.NgayMuon   >= filter.TuNgay.Value);
-        if (filter.DenNgay.HasValue)   q = q.Where(p => p.NgayMuon   <= filter.DenNgay.Value);
+        var q = db.PhieuMuons.AsNoTracking().AsQueryable();
 
-        var today    = DateOnly.FromDateTime(DateTime.Today);
-        var total    = await q.CountAsync();
-        var items    = await q
-            .OrderByDescending(p => p.NgayMuon)
-            .Skip((filter.Page - 1) * filter.PageSize)
-            .Take(filter.PageSize)
-            .Select(p => new PhieuMuonDto
+        if (filter.MaDocGia.HasValue) q = q.Where(p => p.MaDocGia == filter.MaDocGia.Value);
+        if (filter.TrangThai.HasValue)
+        {
+            q = filter.TrangThai.Value switch
             {
-                MaPhieuMuon  = p.MaPhieuMuon,
-                TenDocGia    = p.DocGia.HoTen,
-                Lop          = p.DocGia.Lop ?? "",
-                NgayMuon     = p.NgayMuon,
-                NgayHanTra   = p.NgayHanTra,
-                TrangThai    = p.TrangThai,
-                TrangThaiText = MapTrangThai(p.TrangThai),
-                SoNgayTreHan = p.NgayHanTra < today
-                    ? today.DayNumber - p.NgayHanTra.DayNumber : 0,
-                SoSachMuon   = p.CTPhieuMuons.Count
+                // "Quá hạn" gồm cả phiếu chưa được job đánh dấu
+                3 => q.Where(p => p.TrangThai == 3
+                               || ((p.TrangThai == 1 || p.TrangThai == 4) && p.NgayHanTra < today)),
+                1 => q.Where(p => p.TrangThai == 1 && p.NgayHanTra >= today),
+                4 => q.Where(p => p.TrangThai == 4 && p.NgayHanTra >= today),
+                var tt => q.Where(p => p.TrangThai == tt)
+            };
+        }
+        if (filter.TuNgay.HasValue)  q = q.Where(p => p.NgayMuon >= filter.TuNgay.Value);
+        if (filter.DenNgay.HasValue) q = q.Where(p => p.NgayMuon <= filter.DenNgay.Value);
+
+        var total = await q.CountAsync();
+        var rows  = await q
+            .OrderByDescending(p => p.NgayMuon).ThenByDescending(p => p.MaPhieuMuon)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(p => new
+            {
+                p.MaPhieuMuon, p.DocGia.HoTen, p.DocGia.Lop,
+                p.NgayMuon, p.NgayHanTra, p.TrangThai,
+                SoSach = p.CTPhieuMuons.Sum(ct => ct.SoLuongMuon)
             })
             .ToListAsync();
 
         return new PaginatedResult<PhieuMuonDto>
         {
-            Items = items, TotalCount = total,
-            Page = filter.Page, PageSize = filter.PageSize
+            Items = rows.Select(p => new PhieuMuonDto
+            {
+                MaPhieuMuon   = p.MaPhieuMuon,
+                TenDocGia     = p.HoTen,
+                Lop           = p.Lop ?? "",
+                NgayMuon      = p.NgayMuon,
+                NgayHanTra    = p.NgayHanTra,
+                TrangThai     = p.TrangThai,
+                TrangThaiText = MapTrangThai(p.TrangThai, p.NgayHanTra, today),
+                SoNgayTreHan  = SoNgayTre(p.TrangThai, p.NgayHanTra, today),
+                SoSachMuon    = p.SoSach
+            }).ToList(),
+            TotalCount = total,
+            Page = page, PageSize = pageSize
         };
     }
 
     public async Task<IEnumerable<PhieuMuonQuaHanDto>> GetQuaHanAsync()
     {
-        var today = DateOnly.FromDateTime(DateTime.Today);
-        return await db.PhieuMuons
-            .Include(p => p.DocGia)
-            .Where(p => p.TrangThai == 1 && p.NgayHanTra < today)
-            .Select(p => new PhieuMuonQuaHanDto
+        var today   = DateOnly.FromDateTime(DateTime.Today);
+        var mucPhat = await GetMucPhatAsync();
+
+        var rows = await db.PhieuMuons
+            .AsNoTracking()
+            .Where(p => TrangThaiChuaTra.Contains(p.TrangThai) && p.NgayHanTra < today)
+            .Select(p => new { p.MaPhieuMuon, p.DocGia.HoTen, p.DocGia.Lop, p.DocGia.Email, p.NgayHanTra })
+            .ToListAsync();
+
+        return rows.Select(p =>
+        {
+            var soNgayTre = today.DayNumber - p.NgayHanTra.DayNumber;
+            return new PhieuMuonQuaHanDto
             {
                 MaPhieuMuon     = p.MaPhieuMuon,
-                TenDocGia       = p.DocGia.HoTen,
-                Lop             = p.DocGia.Lop,
-                Email           = p.DocGia.Email,
+                TenDocGia       = p.HoTen,
+                Lop             = p.Lop,
+                Email           = p.Email,
                 NgayHanTra      = p.NgayHanTra,
-                SoNgayTre       = today.DayNumber - p.NgayHanTra.DayNumber,
-                TienPhatUocTinh = (today.DayNumber - p.NgayHanTra.DayNumber) * 2000m
-            })
-            .ToListAsync();
+                SoNgayTre       = soNgayTre,
+                TienPhatUocTinh = soNgayTre * mucPhat
+            };
+        }).ToList();
     }
 
     public async Task<IEnumerable<PhieuMuonDto>> GetDangMuonByDocGiaAsync(int maDocGia)
     {
         var today = DateOnly.FromDateTime(DateTime.Today);
-        return await db.PhieuMuons
-            .Include(p => p.DocGia)
-            .Include(p => p.CTPhieuMuons)
-            .Where(p => p.MaDocGia == maDocGia && p.TrangThai == 1)
-            .Select(p => new PhieuMuonDto
+        var rows = await db.PhieuMuons
+            .AsNoTracking()
+            .Where(p => p.MaDocGia == maDocGia && TrangThaiChuaTra.Contains(p.TrangThai))
+            .Select(p => new
             {
-                MaPhieuMuon  = p.MaPhieuMuon,
-                TenDocGia    = p.DocGia.HoTen,
-                Lop          = p.DocGia.Lop ?? "",
-                NgayMuon     = p.NgayMuon,
-                NgayHanTra   = p.NgayHanTra,
-                TrangThai    = p.TrangThai,
-                TrangThaiText = MapTrangThai(p.TrangThai),
-                SoNgayTreHan = p.NgayHanTra < today
-                    ? today.DayNumber - p.NgayHanTra.DayNumber : 0,
-                SoSachMuon   = p.CTPhieuMuons.Count
+                p.MaPhieuMuon, p.DocGia.HoTen, p.DocGia.Lop,
+                p.NgayMuon, p.NgayHanTra, p.TrangThai,
+                SoSach = p.CTPhieuMuons.Where(ct => ct.TrangThaiCT == 1).Sum(ct => ct.SoLuongMuon)
             })
             .ToListAsync();
+
+        return rows.Select(p => new PhieuMuonDto
+        {
+            MaPhieuMuon   = p.MaPhieuMuon,
+            TenDocGia     = p.HoTen,
+            Lop           = p.Lop ?? "",
+            NgayMuon      = p.NgayMuon,
+            NgayHanTra    = p.NgayHanTra,
+            TrangThai     = p.TrangThai,
+            TrangThaiText = MapTrangThai(p.TrangThai, p.NgayHanTra, today),
+            SoNgayTreHan  = SoNgayTre(p.TrangThai, p.NgayHanTra, today),
+            SoSachMuon    = p.SoSach
+        }).ToList();
     }
 
-    private static string MapTrangThai(byte tt) => tt switch
+    private async Task<decimal> GetMucPhatAsync()
     {
-        1 => "Đang mượn", 2 => "Đã trả", 3 => "Quá hạn", 4 => "Đã gia hạn", _ => "Không xác định"
+        var giaTri = await db.CauHinhHeThongs
+            .Where(c => c.TenCauHinh == "MucPhatNgayTreHan")
+            .Select(c => c.GiaTri)
+            .FirstOrDefaultAsync();
+        return decimal.TryParse(giaTri, NumberStyles.Number, CultureInfo.InvariantCulture, out var v) ? v : 0;
+    }
+
+    private static int SoNgayTre(byte tt, DateOnly hanTra, DateOnly today) =>
+        tt != 2 && hanTra < today ? today.DayNumber - hanTra.DayNumber : 0;
+
+    private static string MapTrangThai(byte tt, DateOnly hanTra, DateOnly today) => tt switch
+    {
+        2 => "Đã trả",
+        3 => "Quá hạn",
+        1 or 4 when hanTra < today => "Quá hạn",
+        1 => "Đang mượn",
+        4 => "Đã gia hạn",
+        _ => "Không xác định"
     };
 }

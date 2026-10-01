@@ -6,6 +6,6 @@ public class TaiKhoanDto {
     public string TenVaiTro { get; set; } = "";
     public int MaVaiTro { get; set; }
     public string? Email { get; set; }
+    public string? SoDienThoai { get; set; }
     public byte TrangThai { get; set; }
-    public string MatKhau { get; set; } = ""; // BCrypt hash — chỉ dùng khi verify
 }

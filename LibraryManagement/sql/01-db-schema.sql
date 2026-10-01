@@ -1,4 +1,4 @@
--- ============================================================
+﻿-- ============================================================
 -- DATABASE: QuanLyThuVien_THCS_ThanhTuan
 -- Encoding: UTF-8 | Collation: Vietnamese_CI_AS
 -- ============================================================
@@ -81,9 +81,11 @@ CREATE TABLE DocGia (
     Email       VARCHAR(150)    NULL,
     SoDienThoai VARCHAR(15)     NULL,
     NgayDangKy  DATE            NOT NULL DEFAULT CAST(GETDATE() AS DATE),
-    TrangThai   TINYINT         NOT NULL DEFAULT 1, -- 1=Hoạt động, 0=Khóa
-    CONSTRAINT UQ_DocGia_Email  UNIQUE (Email)
+    TrangThai   TINYINT         NOT NULL DEFAULT 1 -- 1=Hoạt động, 0=Khóa
 );
+
+-- UNIQUE constraint chỉ cho phép một giá trị NULL, nên dùng filtered index
+CREATE UNIQUE INDEX UQ_DocGia_Email ON DocGia(Email) WHERE Email IS NOT NULL;
 
 CREATE TABLE CauHinhHeThong (
     MaCauHinh       INT             IDENTITY(1,1) PRIMARY KEY,
@@ -189,9 +191,10 @@ CREATE TABLE TaiKhoan (
     TrangThai       TINYINT         NOT NULL DEFAULT 1,
     CONSTRAINT FK_TK_VaiTro     FOREIGN KEY (MaVaiTro)  REFERENCES VaiTro(MaVaiTro),
     CONSTRAINT FK_TK_DocGia     FOREIGN KEY (MaDocGia)  REFERENCES DocGia(MaDocGia),
-    CONSTRAINT UQ_TK_TenDN      UNIQUE (TenDangNhap),
-    CONSTRAINT UQ_TK_Email      UNIQUE (Email)
+    CONSTRAINT UQ_TK_TenDN      UNIQUE (TenDangNhap)
 );
+
+CREATE UNIQUE INDEX UQ_TK_Email ON TaiKhoan(Email) WHERE Email IS NOT NULL;
 
 -- ============================================================
 -- INDEXES — tối ưu tìm kiếm và join

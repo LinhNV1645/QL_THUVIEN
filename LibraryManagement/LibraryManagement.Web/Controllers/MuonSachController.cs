@@ -1,41 +1,23 @@
 using LibraryManagement.Application.DTOs.MuonSach;
 using LibraryManagement.Application.DTOs.Sach;
-using LibraryManagement.Application.DTOs.DocGia;
-using LibraryManagement.Application.Common;
 using LibraryManagement.Application.Interfaces;
-using LibraryManagement.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using System.Text.Json;
 
 namespace LibraryManagement.Web.Controllers;
 
 [Authorize(Policy = "Staff")]
-public class MuonSachController : Controller
+public class MuonSachController(
+    IPhieuMuonRepository phieuMuonRepo,
+    ISachRepository sachRepo,
+    IDocGiaRepository docGiaRepo) : Controller
 {
-    private readonly IPhieuMuonRepository _phieuMuonRepo;
-    private readonly ISachRepository _sachRepo;
-    private readonly IDocGiaRepository _docGiaRepo;
-    private readonly AppDbContext _db;
-
-    public MuonSachController(
-        IPhieuMuonRepository phieuMuonRepo,
-        ISachRepository sachRepo,
-        IDocGiaRepository docGiaRepo,
-        AppDbContext db)
-    {
-        _phieuMuonRepo = phieuMuonRepo;
-        _sachRepo = sachRepo;
-        _docGiaRepo = docGiaRepo;
-        _db = db;
-    }
-
     // GET /MuonSach
     public async Task<IActionResult> Index(PhieuMuonFilterDto filter)
     {
-        var result = await _phieuMuonRepo.GetAllAsync(filter);
+        var result = await phieuMuonRepo.GetAllAsync(filter);
         ViewBag.Filter = filter;
         return View(result);
     }
@@ -57,10 +39,15 @@ public class MuonSachController : Controller
         try
         {
             var danhSachSach = JsonSerializer.Deserialize<List<SachMuonItem>>(
-                sachJson ?? "[]",
+                string.IsNullOrWhiteSpace(sachJson) ? "[]" : sachJson,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
                 ?? [];
 
+            if (maDocGia <= 0)
+            {
+                TempData["Error"] = "Vui lòng chọn độc giả.";
+                return View();
+            }
             if (danhSachSach.Count == 0)
             {
                 TempData["Error"] = "Vui lòng chọn ít nhất một cuốn sách.";
@@ -76,7 +63,7 @@ public class MuonSachController : Controller
                 GhiChu = ghiChu
             };
 
-            var maPhieu = await _phieuMuonRepo.LapPhieuMuonAsync(dto);
+            var maPhieu = await phieuMuonRepo.LapPhieuMuonAsync(dto);
             TempData["Success"] = $"Lập phiếu mượn #{maPhieu} thành công.";
             return RedirectToAction(nameof(Detail), new { id = maPhieu });
         }
@@ -91,7 +78,7 @@ public class MuonSachController : Controller
     [HttpGet]
     public async Task<IActionResult> Detail(int id)
     {
-        var phieu = await _phieuMuonRepo.GetByIdAsync(id);
+        var phieu = await phieuMuonRepo.GetByIdAsync(id);
         if (phieu == null) return NotFound();
         return View(phieu);
     }
@@ -100,7 +87,7 @@ public class MuonSachController : Controller
     [HttpGet]
     public async Task<IActionResult> QuaHan()
     {
-        var list = await _phieuMuonRepo.GetQuaHanAsync();
+        var list = await phieuMuonRepo.GetQuaHanAsync();
         return View(list);
     }
 
@@ -108,13 +95,15 @@ public class MuonSachController : Controller
     [HttpGet]
     public async Task<IActionResult> TimDocGia(string? keyword)
     {
-        var result = await _docGiaRepo.GetAllAsync(keyword, null, 1, 10);
-        var json = result.Items.Select(d => new
-        {
-            id = d.MaDocGia,
-            hoTen = d.HoTen,
-            lop = d.Lop ?? ""
-        });
+        var result = await docGiaRepo.GetAllAsync(keyword, null, 1, 10);
+        var json = result.Items
+            .Where(d => d.TrangThai == 1)
+            .Select(d => new
+            {
+                id = d.MaDocGia,
+                hoTen = d.HoTen,
+                lop = d.Lop ?? ""
+            });
         return Json(json);
     }
 
@@ -123,7 +112,7 @@ public class MuonSachController : Controller
     public async Task<IActionResult> TimSach(string? keyword)
     {
         var filter = new SachFilterDto { TuKhoa = keyword, ChiConTon = true, Page = 1, PageSize = 10 };
-        var result = await _sachRepo.GetAllAsync(filter);
+        var result = await sachRepo.GetAllAsync(filter);
         var json = result.Items.Select(s => new
         {
             id = s.MaSach,
@@ -137,15 +126,15 @@ public class MuonSachController : Controller
     [HttpGet]
     public async Task<IActionResult> InfoDocGia(int maDocGia)
     {
-        var dangMuon = await _phieuMuonRepo.GetDangMuonByDocGiaAsync(maDocGia);
-        var docGiaResult = await _docGiaRepo.GetAllAsync(null, null, 1, 1000);
-        var docGia = docGiaResult.Items.FirstOrDefault(d => d.MaDocGia == maDocGia);
+        var docGia = await docGiaRepo.GetByIdAsync(maDocGia);
         if (docGia == null) return Json(null);
+        var dangMuon = await phieuMuonRepo.GetDangMuonByDocGiaAsync(maDocGia);
         return Json(new
         {
             hoTen = docGia.HoTen,
             lop = docGia.Lop ?? "",
-            soSachDangMuon = dangMuon.Count()
+            soSachDangMuon = dangMuon.Sum(p => p.SoSachMuon),
+            coPhieuQuaHan = dangMuon.Any(p => p.SoNgayTreHan > 0)
         });
     }
 }

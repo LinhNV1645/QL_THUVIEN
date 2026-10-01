@@ -19,26 +19,35 @@ public class SachRepository(AppDbContext db) : ISachRepository
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(filter.TuKhoa))
-            q = q.Where(s => s.TenSach.Contains(filter.TuKhoa)
-                           || (s.MoTa != null && s.MoTa.Contains(filter.TuKhoa)));
+        {
+            var kw = filter.TuKhoa.Trim();
+            q = q.Where(s => s.TenSach.Contains(kw)
+                           || s.TacGia.TenTacGia.Contains(kw)
+                           || s.MaQR == kw
+                           || (s.MoTa != null && s.MoTa.Contains(kw)));
+        }
 
         if (filter.MaTheLoai.HasValue) q = q.Where(s => s.MaTheLoai == filter.MaTheLoai.Value);
         if (filter.MaTacGia.HasValue)  q = q.Where(s => s.MaTacGia  == filter.MaTacGia.Value);
         if (filter.MaNXB.HasValue)     q = q.Where(s => s.MaNXB     == filter.MaNXB.Value);
         if (filter.ChiConTon)          q = q.Where(s => s.SoLuongTon > 0);
 
+        var page     = Math.Max(1, filter.Page);
+        var pageSize = Math.Max(1, filter.PageSize);
+
         var total = await q.CountAsync();
         var items = await q
+            .AsNoTracking()
             .OrderBy(s => s.TenSach)
-            .Skip((filter.Page - 1) * filter.PageSize)
-            .Take(filter.PageSize)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(s => ToDto(s))
             .ToListAsync();
 
         return new PaginatedResult<SachDto>
         {
             Items = items, TotalCount = total,
-            Page = filter.Page, PageSize = filter.PageSize
+            Page = page, PageSize = pageSize
         };
     }
 
@@ -86,6 +95,16 @@ public class SachRepository(AppDbContext db) : ISachRepository
     {
         var sach = await db.Sachs.FindAsync(dto.MaSach)
             ?? throw new KeyNotFoundException($"Sách {dto.MaSach} không tồn tại");
+
+        // Điều chỉnh tồn kho theo phần chênh lệch số lượng nhập
+        var chenhLech = dto.SoLuongNhap - sach.SoLuongNhap;
+        if (sach.SoLuongTon + chenhLech < 0)
+            throw new InvalidOperationException(
+                $"Không thể giảm số lượng nhập xuống {dto.SoLuongNhap}: " +
+                $"đang có {sach.SoLuongNhap - sach.SoLuongTon} cuốn được mượn hoặc đã mất.");
+        sach.SoLuongNhap += chenhLech;
+        sach.SoLuongTon  += chenhLech;
+
         sach.MaTheLoai   = dto.MaTheLoai;
         sach.MaTacGia    = dto.MaTacGia;
         sach.MaNXB       = dto.MaNXB;
@@ -101,6 +120,12 @@ public class SachRepository(AppDbContext db) : ISachRepository
     {
         var sach = await db.Sachs.FindAsync(maSach)
             ?? throw new KeyNotFoundException($"Sách {maSach} không tồn tại");
+
+        var dangMuon = await db.CTPhieuMuons.AnyAsync(ct => ct.MaSach == maSach && ct.TrangThaiCT == 1);
+        if (dangMuon)
+            throw new InvalidOperationException(
+                "Không thể ẩn sách đang được mượn. Vui lòng chờ độc giả trả sách.");
+
         sach.TrangThai = 0;
         await db.SaveChangesAsync();
     }
@@ -123,6 +148,7 @@ public class SachRepository(AppDbContext db) : ISachRepository
         MaTacGia    = s.MaTacGia,
         MaNXB       = s.MaNXB,
         NamXuatBan  = s.NamXuatBan,
+        SoTrang     = s.SoTrang,
         SoLuongTon  = s.SoLuongTon,
         SoLuongNhap = s.SoLuongNhap,
         ViTri       = s.ViTri,

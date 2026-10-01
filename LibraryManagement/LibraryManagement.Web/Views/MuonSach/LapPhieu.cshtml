@@ -9,7 +9,7 @@
     </a>
 </div>
 
-<form method="post" asp-action="LapPhieu">
+<form method="post" asp-action="LapPhieu" id="frmLapPhieu">
     @Html.AntiForgeryToken()
     <input type="hidden" name="sachJson" id="sachJson" value="[]" />
 
@@ -37,6 +37,9 @@
                                 Lớp: <span id="infoLop"></span> &nbsp;|&nbsp;
                                 Đang mượn: <span id="infoSoSach" class="fw-bold text-danger"></span> cuốn
                             </div>
+                        </div>
+                        <div id="infoQuaHan" class="alert alert-warning py-2 mt-2 mb-0 small d-none">
+                            <i class="bi bi-exclamation-triangle me-1"></i>Độc giả đang có phiếu mượn quá hạn chưa trả.
                         </div>
                     </div>
                 </div>
@@ -97,6 +100,9 @@
 
 @section Scripts {
 <script>
+const escapeHtml = s => String(s ?? '').replace(/[&<>"']/g,
+    c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
 // --- Autocomplete độc giả ---
 const docGiaSearch = document.getElementById('docGiaSearch');
 const docGiaSuggest = document.getElementById('docGiaSuggest');
@@ -116,7 +122,7 @@ docGiaSearch.addEventListener('input', () => {
             const btn = document.createElement('button');
             btn.type = 'button';
             btn.className = 'list-group-item list-group-item-action py-2';
-            btn.innerHTML = `<strong>${d.hoTen}</strong> <span class="badge bg-secondary ms-1">${d.lop}</span>`;
+            btn.innerHTML = `<strong>${escapeHtml(d.hoTen)}</strong> <span class="badge bg-secondary ms-1">${escapeHtml(d.lop)}</span>`;
             btn.addEventListener('click', () => selectDocGia(d));
             docGiaSuggest.appendChild(btn);
         });
@@ -141,6 +147,7 @@ async function selectDocGia(d) {
         document.getElementById('infoLop').textContent = info.lop || '—';
         document.getElementById('infoSoSach').textContent = info.soSachDangMuon;
         document.getElementById('docGiaInfo').classList.remove('d-none');
+        document.getElementById('infoQuaHan').classList.toggle('d-none', !info.coPhieuQuaHan);
     }
 }
 
@@ -202,7 +209,7 @@ function attachSachSearch(idx) {
                 const btn = document.createElement('button');
                 btn.type = 'button';
                 btn.className = 'list-group-item list-group-item-action py-2';
-                btn.innerHTML = `${s.tenSach} <span class="badge bg-success ms-1">Tồn: ${s.soLuongTon}</span>`;
+                btn.innerHTML = `${escapeHtml(s.tenSach)} <span class="badge bg-success ms-1">Tồn: ${s.soLuongTon}</span>`;
                 btn.addEventListener('click', () => {
                     sachRows.querySelector(`.sach-id[data-idx="${idx}"]`).value = s.id;
                     input.value = s.tenSach;
@@ -236,7 +243,7 @@ function updateSachJson() {
 }
 
 // Validate trước khi submit
-document.querySelector('form').addEventListener('submit', e => {
+document.getElementById('frmLapPhieu').addEventListener('submit', e => {
     updateSachJson();
     if (parseInt(maDocGiaInput.value) < 1) {
         e.preventDefault();

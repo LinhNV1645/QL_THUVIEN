@@ -1,4 +1,4 @@
-using BCrypt.Net;
+using LibraryManagement.Application.Common;
 using LibraryManagement.Application.DTOs.TaiKhoan;
 using LibraryManagement.Application.Interfaces;
 using LibraryManagement.Domain.Entities;
@@ -9,9 +9,46 @@ namespace LibraryManagement.Infrastructure.Repositories;
 
 public class TaiKhoanRepository(AppDbContext db) : ITaiKhoanRepository
 {
+    public async Task<TaiKhoanDto?> XacThucAsync(string tenDangNhap, string matKhau)
+    {
+        if (string.IsNullOrWhiteSpace(tenDangNhap) || string.IsNullOrEmpty(matKhau))
+            return null;
+
+        var tk = await db.TaiKhoans
+            .Include(t => t.VaiTro)
+            .FirstOrDefaultAsync(t => t.TenDangNhap == tenDangNhap.Trim() && t.TrangThai == 1);
+        if (tk is null) return null;
+
+        bool hopLe;
+        try
+        {
+            hopLe = BCrypt.Net.BCrypt.Verify(matKhau, tk.MatKhau);
+        }
+        catch (BCrypt.Net.SaltParseException)
+        {
+            // Hash trong DB không đúng định dạng BCrypt
+            hopLe = false;
+        }
+        if (!hopLe) return null;
+
+        tk.LanDangNhapCuoi = DateTime.Now;
+        await db.SaveChangesAsync();
+        return ToDto(tk);
+    }
+
+    public async Task<TaiKhoanDto?> GetByIdAsync(int maTK)
+    {
+        var tk = await db.TaiKhoans
+            .AsNoTracking()
+            .Include(t => t.VaiTro)
+            .FirstOrDefaultAsync(t => t.MaTaiKhoan == maTK);
+        return tk is null ? null : ToDto(tk);
+    }
+
     public async Task<TaiKhoanDto?> GetByUsernameAsync(string tenDangNhap)
     {
         var tk = await db.TaiKhoans
+            .AsNoTracking()
             .Include(t => t.VaiTro)
             .FirstOrDefaultAsync(t => t.TenDangNhap == tenDangNhap);
         return tk is null ? null : ToDto(tk);
@@ -20,20 +57,33 @@ public class TaiKhoanRepository(AppDbContext db) : ITaiKhoanRepository
     public async Task<IEnumerable<TaiKhoanDto>> GetAllAsync()
     {
         return await db.TaiKhoans
+            .AsNoTracking()
             .Include(t => t.VaiTro)
             .OrderBy(t => t.HoTen)
             .Select(t => ToDto(t))
             .ToListAsync();
     }
 
+    public async Task<IEnumerable<LookupItemDto>> GetVaiTrosAsync()
+    {
+        return await db.VaiTros
+            .AsNoTracking()
+            .OrderBy(v => v.MaVaiTro)
+            .Select(v => new LookupItemDto { Id = v.MaVaiTro, Ten = v.TenVaiTro })
+            .ToListAsync();
+    }
+
     public async Task<int> CreateAsync(CreateTaiKhoanDto dto)
     {
-        var hash = BCrypt.Net.BCrypt.HashPassword(dto.MatKhau);
+        var tenDangNhap = dto.TenDangNhap.Trim();
+        if (await db.TaiKhoans.AnyAsync(t => t.TenDangNhap == tenDangNhap))
+            throw new InvalidOperationException($"Tên đăng nhập '{tenDangNhap}' đã tồn tại.");
+
         var tk = new TaiKhoan
         {
             MaVaiTro    = dto.MaVaiTro,
-            TenDangNhap = dto.TenDangNhap,
-            MatKhau     = hash,
+            TenDangNhap = tenDangNhap,
+            MatKhau     = BCrypt.Net.BCrypt.HashPassword(dto.MatKhau),
             HoTen       = dto.HoTen,
             Email       = dto.Email,
             SoDienThoai = dto.SoDienThoai,
@@ -81,7 +131,7 @@ public class TaiKhoanRepository(AppDbContext db) : ITaiKhoanRepository
         TenVaiTro   = t.VaiTro.TenVaiTro,
         MaVaiTro    = t.MaVaiTro,
         Email       = t.Email,
-        TrangThai   = t.TrangThai,
-        MatKhau     = t.MatKhau
+        SoDienThoai = t.SoDienThoai,
+        TrangThai   = t.TrangThai
     };
 }

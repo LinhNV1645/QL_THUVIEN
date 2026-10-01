@@ -53,6 +53,8 @@ builder.Services.AddScoped<IGiaHanRepository, GiaHanRepository>();
 builder.Services.AddScoped<IPhieuTraRepository, PhieuTraRepository>();
 builder.Services.AddScoped<ITaiKhoanRepository, TaiKhoanRepository>();
 builder.Services.AddScoped<ICauHinhRepository, CauHinhRepository>();
+builder.Services.AddScoped<IDanhMucRepository, DanhMucRepository>();
+builder.Services.AddScoped<IThongKeRepository, ThongKeRepository>();
 // Infrastructure Services
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IQrService, QrService>();
@@ -65,6 +67,7 @@ if (!app.Environment.IsDevelopment())
     app.UseExceptionHandler("/Error/500");
     app.UseHsts();
 }
+app.UseStatusCodePagesWithReExecute("/Error/{0}");
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
@@ -76,8 +79,14 @@ app.UseHangfireDashboard("/hangfire", new DashboardOptions {
     Authorization = [new HangfireAuthFilter()]
 });
 
+var gioVietNam = TimeZoneInfo.FindSystemTimeZoneById(
+    OperatingSystem.IsWindows() ? "SE Asia Standard Time" : "Asia/Ho_Chi_Minh");
+
+RecurringJob.AddOrUpdate<CapNhatQuaHanJob>("cap-nhat-qua-han",
+    x => x.Execute(), "5 0 * * *", new RecurringJobOptions { TimeZone = gioVietNam }); // 00:05 mỗi ngày
+
 RecurringJob.AddOrUpdate<NhacNhoHanTraJob>("nhac-nho-han-tra",
-    x => x.Execute(), "0 7 * * *"); // 7AM every day
+    x => x.Execute(), "0 7 * * *", new RecurringJobOptions { TimeZone = gioVietNam }); // 07:00 mỗi ngày
 
 app.MapControllerRoute(
     name: "default",

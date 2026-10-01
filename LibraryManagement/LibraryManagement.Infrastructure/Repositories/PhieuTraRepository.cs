@@ -12,29 +12,62 @@ public class PhieuTraRepository(AppDbContext db) : IPhieuTraRepository
     // ── gọi sp_TraSach với OUTPUT param ─────────────────────────────────────
     public async Task<TraSachResultDto> TraSachAsync(TraSachDto dto)
     {
+        if (dto.TrangThaiSach is < 1 or > 3)
+            throw new ArgumentOutOfRangeException(nameof(dto.TrangThaiSach), "Tình trạng sách không hợp lệ.");
+
         await db.Database.OpenConnectionAsync();
-        using var cmd = (SqlCommand)db.Database.GetDbConnection().CreateCommand();
-        cmd.CommandType = CommandType.StoredProcedure;
-        cmd.CommandText = "sp_TraSach";
-        cmd.Parameters.AddWithValue("@MaPhieuMuon",   dto.MaPhieuMuon);
-        cmd.Parameters.AddWithValue("@TrangThaiSach",  dto.TrangThaiSach);
-        cmd.Parameters.AddWithValue("@NhanVienThu",   dto.NhanVienThu);
-        cmd.Parameters.AddWithValue("@GhiChu",        (object?)dto.GhiChu ?? DBNull.Value);
-
-        var outParam = new SqlParameter("@MaPhieuTra", SqlDbType.Int)
-            { Direction = ParameterDirection.Output };
-        cmd.Parameters.Add(outParam);
-
-        TraSachResultDto result = new();
-        using var reader = await cmd.ExecuteReaderAsync();
-        if (await reader.ReadAsync())
+        try
         {
-            result.MaPhieuTra   = reader.GetInt32(reader.GetOrdinal("MaPhieuTra"));
-            result.TienPhat     = reader.GetDecimal(reader.GetOrdinal("TienPhat"));
-            result.SoNgayTreHan = reader.GetInt32(reader.GetOrdinal("SoNgayTreHan"));
+            using var cmd = (SqlCommand)db.Database.GetDbConnection().CreateCommand();
+            cmd.CommandType = CommandType.StoredProcedure;
+            cmd.CommandText = "sp_TraSach";
+            cmd.Parameters.AddWithValue("@MaPhieuMuon",   dto.MaPhieuMuon);
+            cmd.Parameters.AddWithValue("@TrangThaiSach", dto.TrangThaiSach);
+            cmd.Parameters.AddWithValue("@NhanVienThu",   dto.NhanVienThu);
+            cmd.Parameters.AddWithValue("@GhiChu",
+                string.IsNullOrWhiteSpace(dto.GhiChu) ? DBNull.Value : dto.GhiChu.Trim());
+
+            var outParam = new SqlParameter("@MaPhieuTra", SqlDbType.Int)
+                { Direction = ParameterDirection.Output };
+            cmd.Parameters.Add(outParam);
+
+            TraSachResultDto result = new();
+            using (var reader = await cmd.ExecuteReaderAsync())
+            {
+                if (await reader.ReadAsync())
+                {
+                    result.MaPhieuTra   = reader.GetInt32(reader.GetOrdinal("MaPhieuTra"));
+                    result.TienPhat     = reader.GetDecimal(reader.GetOrdinal("TienPhat"));
+                    result.SoNgayTreHan = reader.GetInt32(reader.GetOrdinal("SoNgayTreHan"));
+                }
+            }
+            return result;
         }
-        db.Database.CloseConnection();
-        return result;
+        finally
+        {
+            await db.Database.CloseConnectionAsync();
+        }
+    }
+
+    public async Task<IEnumerable<PhieuTraDto>> GetAllAsync(int top = 200)
+    {
+        return await db.PhieuTras
+            .AsNoTracking()
+            .OrderByDescending(pt => pt.NgayTra).ThenByDescending(pt => pt.MaPhieuTra)
+            .Take(top)
+            .Select(pt => new PhieuTraDto
+            {
+                MaPhieuTra    = pt.MaPhieuTra,
+                MaPhieuMuon   = pt.MaPhieuMuon,
+                TenDocGia     = pt.PhieuMuon.DocGia.HoTen,
+                NgayTra       = pt.NgayTra,
+                SoNgayMuon    = pt.SoNgayMuon,
+                SoNgayTreHan  = pt.SoNgayTreHan,
+                TienPhat      = pt.TienPhat,
+                DaThuPhat     = pt.DaThuPhat,
+                TrangThaiSach = pt.TrangThaiSach
+            })
+            .ToListAsync();
     }
 
     public async Task<PhieuTraDto?> GetByIdAsync(int maPhieuTra)

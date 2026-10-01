@@ -86,10 +86,10 @@ public class DocGiaRepository(AppDbContext db) : IDocGiaRepository
 
     public async Task<IEnumerable<LichSuMuonDto>> GetLichSuAsync(int maDocGia)
     {
+        var today = DateOnly.FromDateTime(DateTime.Today);
         return await db.PhieuMuons
+            .AsNoTracking()
             .Where(p => p.MaDocGia == maDocGia)
-            .Include(p => p.CTPhieuMuons).ThenInclude(ct => ct.Sach)
-            .Include(p => p.PhieuTra)
             .OrderByDescending(p => p.NgayMuon)
             .SelectMany(p => p.CTPhieuMuons.Select(ct => new LichSuMuonDto
             {
@@ -98,7 +98,10 @@ public class DocGiaRepository(AppDbContext db) : IDocGiaRepository
                 NgayHanTra   = p.NgayHanTra,
                 NgayTra      = p.PhieuTra != null ? p.PhieuTra.NgayTra : null,
                 TenSach      = ct.Sach.TenSach,
-                TinhTrangTra = p.TrangThai == 2 ? "Đã trả" : p.TrangThai == 1 ? "Đang mượn" : p.TrangThai.ToString(),
+                TinhTrangTra = p.TrangThai == 2 ? "Đã trả"
+                             : p.TrangThai == 3 || p.NgayHanTra < today ? "Quá hạn"
+                             : p.TrangThai == 4 ? "Đã gia hạn"
+                             : "Đang mượn",
                 TienPhat     = p.PhieuTra != null ? p.PhieuTra.TienPhat : 0
             }))
             .ToListAsync();
@@ -110,6 +113,9 @@ public class DocGiaRepository(AppDbContext db) : IDocGiaRepository
         MaDocGia    = d.MaDocGia,
         HoTen       = d.HoTen,
         Lop         = d.Lop,
+        NgaySinh    = d.NgaySinh,
+        GioiTinh    = d.GioiTinh,
+        DiaChi      = d.DiaChi,
         Email       = d.Email,
         SoDienThoai = d.SoDienThoai,
         NgayDangKy  = d.NgayDangKy,

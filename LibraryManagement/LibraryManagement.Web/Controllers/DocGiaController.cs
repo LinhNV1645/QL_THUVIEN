@@ -53,6 +53,9 @@ public class DocGiaController : Controller
             MaDocGia = dg.MaDocGia,
             HoTen = dg.HoTen,
             Lop = dg.Lop,
+            NgaySinh = dg.NgaySinh,
+            GioiTinh = dg.GioiTinh,
+            DiaChi = dg.DiaChi,
             Email = dg.Email,
             SoDienThoai = dg.SoDienThoai
         };

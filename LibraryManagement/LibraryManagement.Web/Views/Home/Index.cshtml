@@ -1,6 +1,53 @@
-@model DashboardDto
+@model DashboardViewModel
 @{
     ViewData["Title"] = "Dashboard";
+    var tq = Model.TongQuan;
+    var maxLuotSach = Model.TopSach.Count > 0 ? Model.TopSach.Max(x => x.SoLuotMuon) : 1;
+    var maxLanDocGia = Model.TopDocGia.Count > 0 ? Model.TopDocGia.Max(x => x.SoLanMuon) : 1;
+}
+
+@functions {
+    static readonly string[] MauAvatar = ["#0d6efd", "#6f42c1", "#d63384", "#fd7e14", "#198754", "#0dcaf0"];
+
+    static string ChuCaiDau(string hoTen)
+    {
+        var parts = hoTen.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length == 0 ? "?" : parts[^1][..1].ToUpper();
+    }
+
+    static (string Css, string Nhan) MucKhanCap(int soNgayConLai) => soNgayConLai switch
+    {
+        <= 0 => ("bg-danger-subtle text-danger-emphasis", "Hôm nay"),
+        1    => ("bg-warning-subtle text-warning-emphasis", "Ngày mai"),
+        <= 3 => ("bg-warning-subtle text-warning-emphasis", $"Còn {soNgayConLai} ngày"),
+        _    => ("bg-info-subtle text-info-emphasis", $"Còn {soNgayConLai} ngày")
+    };
+}
+
+@section Styles {
+    <style>
+        .dash-card { border: 0; border-radius: 14px; box-shadow: 0 2px 12px rgba(15, 23, 42, .06); }
+        .dash-card > .card-header { background: #fff; border-bottom: 1px solid #f0f1f5; border-radius: 14px 14px 0 0; padding: .9rem 1.25rem; }
+        .dash-card > .card-footer { background: #fff; border-top: 1px solid #f0f1f5; border-radius: 0 0 14px 14px; }
+        .dash-icon { width: 36px; height: 36px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
+        .dash-row { padding: .75rem 1.25rem; border-bottom: 1px solid #f3f4f7; transition: background .15s; }
+        .dash-row:last-child { border-bottom: 0; }
+        .dash-row:hover { background: #f8f9fc; }
+        .date-tile { width: 52px; min-width: 52px; border-radius: 10px; text-align: center; padding: .35rem 0; line-height: 1.15; }
+        .date-tile .d { font-size: 1.25rem; font-weight: 700; }
+        .date-tile .m { font-size: .68rem; text-transform: uppercase; letter-spacing: .03em; }
+        .rank { width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: .85rem; background: #eef0f4; color: #6c757d; flex-shrink: 0; }
+        .rank-1 { background: linear-gradient(135deg, #ffd54f, #f9a825); color: #fff; box-shadow: 0 2px 6px rgba(249, 168, 37, .45); }
+        .rank-2 { background: linear-gradient(135deg, #cfd8dc, #90a4ae); color: #fff; }
+        .rank-3 { background: linear-gradient(135deg, #ffab91, #e64a19); color: #fff; }
+        .avatar { width: 38px; height: 38px; border-radius: 50%; color: #fff; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .progress-thin { height: 6px; border-radius: 3px; background: #eef0f4; }
+        .min-w-0 { min-width: 0; }
+        .empty-state { padding: 2.5rem 1rem; text-align: center; color: #94a3b8; }
+        .empty-state i { font-size: 2.5rem; display: block; margin-bottom: .5rem; }
+        .ky-pills .btn { border-radius: 20px; padding: .25rem .9rem; }
+        .section-title { font-size: .8rem; letter-spacing: .06em; }
+    </style>
 }
 
 <div class="container-fluid py-4">
@@ -8,14 +55,14 @@
         <i class="bi bi-speedometer2 me-2"></i>Dashboard Thư Viện
     </h2>
 
-    {{-- Row 1: 4 KPI chính --}}
+    @* Row 1: 4 KPI chính *@
     <div class="row g-3 mb-3">
         <div class="col-sm-6 col-xl-3">
             <div class="card border-0 shadow-sm h-100 text-white bg-success">
                 <div class="card-body d-flex justify-content-between align-items-center">
                     <div>
                         <div class="small text-white-50 text-uppercase fw-semibold">Tổng Đầu Sách</div>
-                        <div class="display-6 fw-bold">@Model.TongDauSach</div>
+                        <div class="display-6 fw-bold">@tq.TongDauSach</div>
                     </div>
                     <i class="bi bi-book fs-1 opacity-50"></i>
                 </div>
@@ -26,7 +73,7 @@
                 <div class="card-body d-flex justify-content-between align-items-center">
                     <div>
                         <div class="small text-white-50 text-uppercase fw-semibold">Đang Mượn</div>
-                        <div class="display-6 fw-bold">@Model.DangMuon</div>
+                        <div class="display-6 fw-bold">@tq.DangMuon</div>
                     </div>
                     <i class="bi bi-bookmark-check fs-1 opacity-50"></i>
                 </div>
@@ -37,18 +84,18 @@
                 <div class="card-body d-flex justify-content-between align-items-center">
                     <div>
                         <div class="small text-white-50 text-uppercase fw-semibold">Quá Hạn</div>
-                        <div class="display-6 fw-bold">@Model.QuaHan</div>
+                        <div class="display-6 fw-bold">@tq.QuaHan</div>
                     </div>
                     <i class="bi bi-exclamation-triangle fs-1 opacity-50"></i>
                 </div>
             </div>
         </div>
         <div class="col-sm-6 col-xl-3">
-            <div class="card border-0 shadow-sm h-100 text-white bg-purple" style="background-color:#6f42c1!important">
+            <div class="card border-0 shadow-sm h-100 text-white" style="background-color:#6f42c1!important">
                 <div class="card-body d-flex justify-content-between align-items-center">
                     <div>
                         <div class="small text-white-50 text-uppercase fw-semibold">Tổng Độc Giả</div>
-                        <div class="display-6 fw-bold">@Model.TongDocGia</div>
+                        <div class="display-6 fw-bold">@tq.TongDocGia</div>
                     </div>
                     <i class="bi bi-people fs-1 opacity-50"></i>
                 </div>
@@ -56,7 +103,7 @@
         </div>
     </div>
 
-    {{-- Row 2: Sách tồn + Tiền phạt + Mượn tháng này --}}
+    @* Row 2: Sách tồn + Tiền phạt + Mượn tháng này *@
     <div class="row g-3 mb-4">
         <div class="col-md-5">
             <div class="card border-0 shadow-sm h-100">
@@ -64,13 +111,12 @@
                     <div class="small text-muted text-uppercase fw-semibold mb-1">
                         <i class="bi bi-archive me-1"></i>Tổng Sách Tồn Kho
                     </div>
-                    <div class="h3 fw-bold mb-2">@Model.TongSachTon <span class="fs-6 text-muted">cuốn</span></div>
+                    <div class="h3 fw-bold mb-2">@tq.TongSachTon <span class="fs-6 text-muted">cuốn</span></div>
                     @{
-                        int maxHienThi = Math.Max(Model.TongSachTon, 1);
-                        int muonPct = (int)Math.Round((double)Model.DangMuon / maxHienThi * 100);
-                        muonPct = Math.Min(muonPct, 100);
+                        int maxHienThi = Math.Max(tq.TongSachTon, 1);
+                        int muonPct = Math.Min((int)Math.Round((double)tq.DangMuon / maxHienThi * 100), 100);
                     }
-                    <div class="text-muted small mb-1">Đang mượn: @Model.DangMuon / @Model.TongSachTon cuốn (@muonPct%)</div>
+                    <div class="text-muted small mb-1">Đang mượn: @tq.DangMuon / @tq.TongSachTon cuốn (@muonPct%)</div>
                     <div class="progress" style="height:10px">
                         <div class="progress-bar bg-primary" style="width:@muonPct%"></div>
                     </div>
@@ -82,7 +128,7 @@
                 <div class="card-body d-flex justify-content-between align-items-center">
                     <div>
                         <div class="small text-white-50 text-uppercase fw-semibold">Tiền Phạt Chưa Thu</div>
-                        <div class="h3 fw-bold">@Model.TienPhatChuaThu.ToString("N0") <span class="fs-6">đ</span></div>
+                        <div class="h3 fw-bold">@tq.TienPhatChuaThu.ToString("N0") <span class="fs-6">đ</span></div>
                     </div>
                     <i class="bi bi-cash-coin fs-1 opacity-50"></i>
                 </div>
@@ -93,7 +139,7 @@
                 <div class="card-body d-flex justify-content-between align-items-center">
                     <div>
                         <div class="small text-white-50 text-uppercase fw-semibold">Mượn Tháng Này</div>
-                        <div class="display-6 fw-bold">@Model.MuonTrongThang</div>
+                        <div class="display-6 fw-bold">@tq.MuonTrongThang</div>
                     </div>
                     <i class="bi bi-calendar3 fs-1 opacity-50"></i>
                 </div>
@@ -101,51 +147,277 @@
         </div>
     </div>
 
-    {{-- Row 3: Bảng quá hạn top 5 (chỉ hiển thị khi có) --}}
-    @if (Model.QuaHan > 0)
+    @if (Model.LaNhanVien)
     {
-        dynamic quaHanList = ViewBag.QuaHanList;
-        <div class="row">
-            <div class="col-12">
-                <div class="card border-0 shadow-sm border-start border-danger border-3">
-                    <div class="card-header bg-white border-0 py-3">
-                        <h6 class="mb-0 text-danger fw-bold">
-                            <i class="bi bi-alarm me-1"></i>
-                            Top 5 Phiếu Mượn Quá Hạn Lâu Nhất
-                        </h6>
+        @* Row 3: Sắp đến hạn + Quá hạn *@
+        <div class="row g-3 mb-4" id="sap-den-han">
+            <div class="col-xl-7">
+                <div class="card dash-card h-100">
+                    <div class="card-header d-flex flex-wrap align-items-center gap-2">
+                        <span class="dash-icon bg-warning-subtle text-warning-emphasis"><i class="bi bi-hourglass-split"></i></span>
+                        <div class="me-auto">
+                            <h6 class="mb-0 fw-bold">Sắp Đến Hạn Trả</h6>
+                            <div class="small text-muted">
+                                Trong @Model.SoNgaySapDenHan ngày tới
+                                <span class="badge rounded-pill bg-warning text-dark ms-1">@Model.TongSoSapDenHan phiếu</span>
+                            </div>
+                        </div>
+                        <div class="btn-group btn-group-sm" role="group">
+                            @foreach (var n in new[] { 3, 7, 14 })
+                            {
+                                <a asp-action="Index" asp-route-ky="@Model.KyThongKe" asp-route-soNgay="@n" asp-fragment="sap-den-han"
+                                   class="btn @(n == Model.SoNgaySapDenHan ? "btn-warning" : "btn-outline-secondary")">@n ngày</a>
+                            }
+                        </div>
                     </div>
                     <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-hover mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th class="ps-3">#</th>
-                                        <th>Mã Phiếu</th>
-                                        <th>Họ Tên Độc Giả</th>
-                                        <th>Hạn Trả</th>
-                                        <th>Số Ngày Quá Hạn</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @{ int stt = 1; }
-                                    @foreach (var item in quaHanList)
-                                    {
-                                        int soNgay = (DateOnly.FromDateTime(DateTime.Today).DayNumber - ((DateOnly)item.NgayHanTra).DayNumber);
-                                        <tr>
-                                            <td class="ps-3">@stt</td>
-                                            <td><span class="badge bg-secondary">#@item.MaPhieuMuon</span></td>
-                                            <td>@item.HoTen</td>
-                                            <td class="text-danger">@item.NgayHanTra.ToString("dd/MM/yyyy")</td>
-                                            <td><span class="badge bg-danger">@soNgay ngày</span></td>
-                                        </tr>
-                                        stt++;
-                                    }
-                                </tbody>
-                            </table>
+                        @if (Model.SapDenHan.Count == 0)
+                        {
+                            <div class="empty-state">
+                                <i class="bi bi-calendar2-check text-success"></i>
+                                Không có phiếu nào đến hạn trong @Model.SoNgaySapDenHan ngày tới.
+                            </div>
+                        }
+                        else
+                        {
+                            @foreach (var item in Model.SapDenHan)
+                            {
+                                var (css, nhan) = MucKhanCap(item.SoNgayConLai);
+                                <div class="dash-row d-flex align-items-center gap-3">
+                                    <div class="date-tile @css">
+                                        <div class="d">@item.NgayHanTra.Day.ToString("00")</div>
+                                        <div class="m">Th@(item.NgayHanTra.Month)</div>
+                                    </div>
+                                    <div class="flex-grow-1 min-w-0">
+                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                            <a asp-controller="DocGia" asp-action="Detail" asp-route-id="@item.MaDocGia"
+                                               class="fw-semibold text-dark text-decoration-none">@item.HoTen</a>
+                                            @if (!string.IsNullOrEmpty(item.Lop))
+                                            {
+                                                <span class="badge bg-light text-secondary border">@item.Lop</span>
+                                            }
+                                            @if (item.DaGiaHan)
+                                            {
+                                                <span class="badge bg-secondary-subtle text-secondary-emphasis" title="Phiếu đã được gia hạn">
+                                                    <i class="bi bi-arrow-repeat"></i> Đã gia hạn
+                                                </span>
+                                            }
+                                        </div>
+                                        <div class="small text-muted text-truncate" title="@item.DanhSachSach">
+                                            <i class="bi bi-journal-bookmark me-1"></i>@item.SoCuon cuốn: @item.DanhSachSach
+                                        </div>
+                                        <div class="small text-muted">
+                                            <a asp-controller="MuonSach" asp-action="Detail" asp-route-id="@item.MaPhieuMuon"
+                                               class="text-decoration-none">#@item.MaPhieuMuon</a>
+                                            · Mượn @item.NgayMuon.ToString("dd/MM")
+                                            @if (!string.IsNullOrEmpty(item.SoDienThoai))
+                                            {
+                                                <span>· <i class="bi bi-telephone"></i> @item.SoDienThoai</span>
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="badge rounded-pill @css mb-2">@nhan</span>
+                                        <div class="btn-group btn-group-sm">
+                                            <a asp-controller="GiaHan" asp-action="Index" asp-route-maPhieuMuon="@item.MaPhieuMuon"
+                                               class="btn btn-outline-primary" title="Gia hạn"><i class="bi bi-calendar-plus"></i></a>
+                                            <a asp-controller="TraSach" asp-action="LapPhieu" asp-route-maPhieuMuon="@item.MaPhieuMuon"
+                                               class="btn btn-outline-success" title="Trả sách"><i class="bi bi-box-arrow-in-left"></i></a>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                    @if (Model.TongSoSapDenHan > Model.SapDenHan.Count)
+                    {
+                        <div class="card-footer text-center py-2">
+                            <a asp-controller="MuonSach" asp-action="Index" class="small text-decoration-none">
+                                Xem tất cả @Model.TongSoSapDenHan phiếu <i class="bi bi-arrow-right"></i>
+                            </a>
                         </div>
+                    }
+                </div>
+            </div>
+
+            <div class="col-xl-5">
+                <div class="card dash-card h-100">
+                    <div class="card-header d-flex align-items-center gap-2">
+                        <span class="dash-icon bg-danger-subtle text-danger-emphasis"><i class="bi bi-alarm"></i></span>
+                        <div class="me-auto">
+                            <h6 class="mb-0 fw-bold">Quá Hạn Lâu Nhất</h6>
+                            <div class="small text-muted">Top 5 phiếu chưa trả</div>
+                        </div>
+                        <a asp-controller="MuonSach" asp-action="QuaHan" class="btn btn-sm btn-outline-danger">Xem tất cả</a>
+                    </div>
+                    <div class="card-body p-0">
+                        @if (Model.QuaHan.Count == 0)
+                        {
+                            <div class="empty-state">
+                                <i class="bi bi-emoji-smile text-success"></i>
+                                Không có phiếu mượn nào quá hạn.
+                            </div>
+                        }
+                        else
+                        {
+                            @foreach (var item in Model.QuaHan)
+                            {
+                                <div class="dash-row d-flex align-items-center gap-3">
+                                    <div class="date-tile bg-danger-subtle text-danger-emphasis">
+                                        <div class="d">@item.SoNgayTre</div>
+                                        <div class="m">ngày</div>
+                                    </div>
+                                    <div class="flex-grow-1 min-w-0">
+                                        <div class="fw-semibold text-truncate">@item.TenDocGia</div>
+                                        <div class="small text-muted">
+                                            <a asp-controller="MuonSach" asp-action="Detail" asp-route-id="@item.MaPhieuMuon"
+                                               class="text-decoration-none">#@item.MaPhieuMuon</a>
+                                            · Hạn @item.NgayHanTra.ToString("dd/MM/yyyy")
+                                        </div>
+                                    </div>
+                                    <div class="text-end small">
+                                        <div class="text-muted">Phạt ước tính</div>
+                                        <div class="fw-bold text-danger">@item.TienPhatUocTinh.ToString("N0") đ</div>
+                                    </div>
+                                </div>
+                            }
+                        }
                     </div>
                 </div>
             </div>
         </div>
     }
+
+    @* Row 4: Bảng xếp hạng *@
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-3" id="xep-hang">
+        <div class="me-auto">
+            <div class="text-muted text-uppercase fw-bold section-title">Bảng xếp hạng</div>
+            <div class="small text-muted">Kỳ thống kê: <strong>@Model.TenKyThongKe</strong></div>
+        </div>
+        <div class="ky-pills d-flex gap-1">
+            @foreach (var (ma, ten) in new[] { ("thang", "Tháng này"), ("nam", "Năm nay"), ("tatca", "Tất cả") })
+            {
+                <a asp-action="Index" asp-route-ky="@ma" asp-route-soNgay="@Model.SoNgaySapDenHan" asp-fragment="xep-hang"
+                   class="btn btn-sm @(ma == Model.KyThongKe ? "btn-success" : "btn-outline-secondary")">@ten</a>
+            }
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="@(Model.LaNhanVien ? "col-lg-6" : "col-12")">
+            <div class="card dash-card h-100">
+                <div class="card-header d-flex align-items-center gap-2">
+                    <span class="dash-icon bg-success-subtle text-success-emphasis"><i class="bi bi-trophy"></i></span>
+                    <div>
+                        <h6 class="mb-0 fw-bold">Top 10 Sách Được Mượn Nhiều Nhất</h6>
+                        <div class="small text-muted">@Model.TenKyThongKe</div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    @if (Model.TopSach.Count == 0)
+                    {
+                        <div class="empty-state">
+                            <i class="bi bi-book"></i>
+                            Chưa có lượt mượn nào trong kỳ này.
+                        </div>
+                    }
+                    else
+                    {
+                        var hang = 1;
+                        @foreach (var s in Model.TopSach)
+                        {
+                            var pct = (int)Math.Round((double)s.SoLuotMuon / Math.Max(maxLuotSach, 1) * 100);
+                            <div class="dash-row d-flex align-items-center gap-3">
+                                <span class="rank @(hang <= 3 ? $"rank-{hang}" : "")">@hang</span>
+                                <div class="flex-grow-1 min-w-0">
+                                    <div class="d-flex justify-content-between gap-2">
+                                        @if (Model.LaNhanVien)
+                                        {
+                                            <a asp-controller="Sach" asp-action="Detail" asp-route-id="@s.MaSach"
+                                               class="fw-semibold text-dark text-decoration-none text-truncate" title="@s.TenSach">@s.TenSach</a>
+                                        }
+                                        else
+                                        {
+                                            <span class="fw-semibold text-truncate" title="@s.TenSach">@s.TenSach</span>
+                                        }
+                                        <span class="fw-bold text-success text-nowrap">@s.SoLuotMuon <span class="small fw-normal text-muted">lượt</span></span>
+                                    </div>
+                                    <div class="small text-muted text-truncate mb-1">
+                                        @s.TenTacGia · <span class="badge bg-light text-secondary border">@s.TenTheLoai</span>
+                                        · Còn @s.SoLuongTon/@s.SoLuongNhap cuốn
+                                    </div>
+                                    <div class="progress progress-thin">
+                                        <div class="progress-bar bg-success" style="width:@pct%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            hang++;
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+
+        @if (Model.LaNhanVien)
+        {
+            <div class="col-lg-6">
+                <div class="card dash-card h-100">
+                    <div class="card-header d-flex align-items-center gap-2">
+                        <span class="dash-icon bg-primary-subtle text-primary-emphasis"><i class="bi bi-person-hearts"></i></span>
+                        <div>
+                            <h6 class="mb-0 fw-bold">Top 10 Độc Giả Mượn Nhiều Nhất</h6>
+                            <div class="small text-muted">@Model.TenKyThongKe</div>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        @if (Model.TopDocGia.Count == 0)
+                        {
+                            <div class="empty-state">
+                                <i class="bi bi-people"></i>
+                                Chưa có độc giả mượn sách trong kỳ này.
+                            </div>
+                        }
+                        else
+                        {
+                            var hang = 1;
+                            @foreach (var d in Model.TopDocGia)
+                            {
+                                var pct = (int)Math.Round((double)d.SoLanMuon / Math.Max(maxLanDocGia, 1) * 100);
+                                <div class="dash-row d-flex align-items-center gap-3">
+                                    <span class="rank @(hang <= 3 ? $"rank-{hang}" : "")">@hang</span>
+                                    <span class="avatar" style="background:@MauAvatar[d.MaDocGia % MauAvatar.Length]">@ChuCaiDau(d.HoTen)</span>
+                                    <div class="flex-grow-1 min-w-0">
+                                        <div class="d-flex justify-content-between gap-2">
+                                            <a asp-controller="DocGia" asp-action="Detail" asp-route-id="@d.MaDocGia"
+                                               class="fw-semibold text-dark text-decoration-none text-truncate">@d.HoTen</a>
+                                            <span class="fw-bold text-primary text-nowrap">@d.SoLanMuon <span class="small fw-normal text-muted">lần</span></span>
+                                        </div>
+                                        <div class="small text-muted text-truncate mb-1">
+                                            @if (!string.IsNullOrEmpty(d.Lop))
+                                            {
+                                                <span class="badge bg-light text-secondary border">@d.Lop</span>
+                                            }
+                                            @d.TongSachMuon cuốn
+                                            @if (d.LanMuonGanNhat is { } gn)
+                                            {
+                                                <span>· Gần nhất @gn.ToString("dd/MM/yyyy")</span>
+                                            }
+                                            @if (d.SoPhieuChuaTra > 0)
+                                            {
+                                                <span class="badge bg-warning-subtle text-warning-emphasis ms-1">@d.SoPhieuChuaTra phiếu chưa trả</span>
+                                            }
+                                        </div>
+                                        <div class="progress progress-thin">
+                                            <div class="progress-bar bg-primary" style="width:@pct%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                hang++;
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
 </div>

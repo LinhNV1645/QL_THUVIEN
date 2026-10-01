@@ -1,66 +1,41 @@
 using LibraryManagement.Application.Interfaces;
-using LibraryManagement.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace LibraryManagement.Web.Controllers;
 
 [Authorize(Policy = "Staff")]
-public class GiaHanController : Controller
+public class GiaHanController(
+    IGiaHanRepository giaHanRepo,
+    IPhieuMuonRepository phieuMuonRepo) : Controller
 {
-    private readonly IGiaHanRepository _giaHanRepo;
-    private readonly AppDbContext _db;
-
-    public GiaHanController(IGiaHanRepository giaHanRepo, AppDbContext db)
-    {
-        _giaHanRepo = giaHanRepo;
-        _db = db;
-    }
-
-    // GET /GiaHan/{maPhieuMuon}
+    // GET /GiaHan?maPhieuMuon={id}
     [HttpGet]
     public async Task<IActionResult> Index(int maPhieuMuon)
     {
-        var phieuMuon = await _db.PhieuMuons
-            .Include(pm => pm.DocGia)
-            .FirstOrDefaultAsync(pm => pm.MaPhieuMuon == maPhieuMuon);
-
+        var phieuMuon = await phieuMuonRepo.GetByIdAsync(maPhieuMuon);
         if (phieuMuon == null) return NotFound();
-
-        var lichSuGiaHan = await _giaHanRepo.GetByPhieuMuonAsync(maPhieuMuon);
-
-        ViewBag.PhieuMuon = phieuMuon;
-        ViewBag.LichSuGiaHan = lichSuGiaHan;
-        ViewBag.SoLanDaGiaHan = lichSuGiaHan.Count();
-        return View();
+        return View(phieuMuon);
     }
 
-    // POST /GiaHan/{maPhieuMuon}
+    // POST /GiaHan?maPhieuMuon={id}
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Index(int maPhieuMuon, string? ghiChu)
     {
         try
         {
             var maNhanVien = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-            var hanTraMoi = await _giaHanRepo.GiaHanAsync(maPhieuMuon, maNhanVien, ghiChu);
+            var hanTraMoi = await giaHanRepo.GiaHanAsync(maPhieuMuon, maNhanVien, ghiChu);
             TempData["Success"] = $"Gia hạn thành công. Hạn trả mới: {hanTraMoi:dd/MM/yyyy}";
             return RedirectToAction("Detail", "MuonSach", new { id = maPhieuMuon });
         }
         catch (Exception ex)
         {
             TempData["Error"] = "Lỗi: " + ex.Message;
-
-            var phieuMuon = await _db.PhieuMuons
-                .Include(pm => pm.DocGia)
-                .FirstOrDefaultAsync(pm => pm.MaPhieuMuon == maPhieuMuon);
-            var lichSuGiaHan = await _giaHanRepo.GetByPhieuMuonAsync(maPhieuMuon);
-
-            ViewBag.PhieuMuon = phieuMuon;
-            ViewBag.LichSuGiaHan = lichSuGiaHan;
-            ViewBag.SoLanDaGiaHan = lichSuGiaHan.Count();
-            return View();
+            var phieuMuon = await phieuMuonRepo.GetByIdAsync(maPhieuMuon);
+            if (phieuMuon == null) return NotFound();
+            return View(phieuMuon);
         }
     }
 }

@@ -5,4 +5,7 @@ public class SachMuonNhieuDto {
     public string TenTacGia { get; set; } = "";
     public string TenTheLoai { get; set; } = "";
     public int SoLuotMuon { get; set; }
+    public int TongCuonMuon { get; set; }
+    public int SoLuongNhap { get; set; }
+    public int SoLuongTon { get; set; }
 }

@@ -5,4 +5,6 @@ public class DocGiaMuonNhieuDto {
     public string? Lop { get; set; }
     public int SoLanMuon { get; set; }
     public int TongSachMuon { get; set; }
+    public int SoPhieuChuaTra { get; set; }
+    public DateOnly? LanMuonGanNhat { get; set; }
 }

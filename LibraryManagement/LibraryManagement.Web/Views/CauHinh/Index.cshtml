@@ -8,29 +8,14 @@
         ["SoNgayMuonMacDinh"]   = ("Số ngày mượn mặc định",     "bi-calendar-week",  "Số ngày được phép mượn sách mỗi lần (VD: 14)"),
         ["SoSachMuonToiDa"]     = ("Số sách mượn tối đa",        "bi-book-stack",     "Số cuốn sách tối đa một độc giả có thể mượn cùng lúc"),
         ["SoLanGiaHanToiDa"]    = ("Số lần gia hạn tối đa",      "bi-arrow-repeat",   "Mỗi phiếu mượn được gia hạn tối đa bao nhiêu lần"),
-        ["TienPhatMoiNgay"]     = ("Tiền phạt mỗi ngày trễ",     "bi-cash-coin",      "Số tiền phạt (đồng) tính cho mỗi ngày trả trễ"),
-        ["SoNgayGiaHan"]        = ("Số ngày gia hạn thêm",       "bi-calendar-plus",  "Số ngày được cộng thêm khi gia hạn"),
+        ["MucPhatNgayTreHan"]   = ("Tiền phạt mỗi ngày trễ",     "bi-cash-coin",      "Số tiền phạt (đồng) tính cho mỗi ngày trả trễ"),
+        ["SoNgayGiaHanMoiLan"]  = ("Số ngày gia hạn thêm",       "bi-calendar-plus",  "Số ngày được cộng thêm khi gia hạn"),
     };
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h4 class="fw-bold mb-0"><i class="bi bi-gear-fill me-2 text-success"></i>Cấu hình hệ thống</h4>
 </div>
-
-@if (TempData["Success"] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show py-2">
-        <i class="bi bi-check-circle me-1"></i>@TempData["Success"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
-@if (TempData["Error"] != null)
-{
-    <div class="alert alert-danger alert-dismissible fade show py-2">
-        <i class="bi bi-exclamation-triangle me-1"></i>@TempData["Error"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
 
 <form asp-action="Update" method="post">
     @Html.AntiForgeryToken()
@@ -74,7 +59,7 @@
                                 </div>
                             </td>
                             <td>
-                                <input type="text"
+                                <input type="number" min="0" step="1" required
                                        name="values[@ch.TenCauHinh]"
                                        value="@ch.GiaTri"
                                        class="form-control form-control-sm"
