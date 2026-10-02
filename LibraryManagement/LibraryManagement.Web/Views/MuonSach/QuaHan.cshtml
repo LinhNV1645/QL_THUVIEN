@@ -48,17 +48,18 @@ else
 
     <div class="card shadow-sm">
         <div class="card-body p-0">
+            <div class="table-responsive">
             <table class="table table-hover table-sm mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th class="ps-3">STT</th>
+                        <th class="ps-3 d-none d-sm-table-cell">STT</th>
                         <th>Mã phiếu</th>
                         <th>Độc giả</th>
-                        <th>Lớp</th>
-                        <th>Email</th>
+                        <th class="d-none d-md-table-cell">Lớp</th>
+                        <th class="d-none d-lg-table-cell">Email</th>
                         <th>Hạn trả</th>
                         <th class="text-center">Số ngày trễ</th>
-                        <th class="text-end">Tiền phạt (ước tính)</th>
+                        <th class="text-end d-none d-md-table-cell">Tiền phạt (ước tính)</th>
                         <th class="text-end pe-3">Thao tác</th>
                     </tr>
                 </thead>
@@ -72,20 +73,20 @@ else
                             _    => ""
                         };
                         <tr class="@urgency">
-                            <td class="ps-3 text-muted">@stt</td>
+                            <td class="ps-3 text-muted d-none d-sm-table-cell">@stt</td>
                             <td>
                                 <a asp-action="Detail" asp-route-id="@p.MaPhieuMuon"
                                    class="fw-semibold text-decoration-none">#@p.MaPhieuMuon</a>
                             </td>
                             <td class="fw-semibold">@p.TenDocGia</td>
-                            <td>
+                            <td class="d-none d-md-table-cell">
                                 @if (!string.IsNullOrEmpty(p.Lop))
                                 {
                                     <span class="badge bg-secondary">@p.Lop</span>
                                 }
                                 else { <span class="text-muted">—</span> }
                             </td>
-                            <td class="small">
+                            <td class="small d-none d-lg-table-cell">
                                 @if (!string.IsNullOrEmpty(p.Email))
                                 {
                                     <a href="mailto:@p.Email" class="text-decoration-none">@p.Email</a>
@@ -96,7 +97,7 @@ else
                             <td class="text-center">
                                 <span class="badge bg-danger fs-6">@p.SoNgayTre</span>
                             </td>
-                            <td class="text-end fw-semibold text-danger">
+                            <td class="text-end fw-semibold text-danger d-none d-md-table-cell">
                                 @p.TienPhatUocTinh.ToString("N0") đ
                             </td>
                             <td class="text-end pe-3">
@@ -132,14 +133,15 @@ else
                 </tbody>
                 <tfoot class="table-light">
                     <tr>
-                        <td colspan="7" class="ps-3 fw-semibold text-end">Tổng tiền phạt ước tính:</td>
-                        <td class="text-end fw-bold text-danger">
+                        <td colspan="5" class="ps-3 fw-semibold text-end">Tổng tiền phạt ước tính:</td>
+                        <td class="text-end fw-bold text-danger d-none d-md-table-cell" colspan="3">
                             @list.Sum(x => x.TienPhatUocTinh).ToString("N0") đ
                         </td>
-                        <td></td>
+                        <td class="d-md-none"></td>
                     </tr>
                 </tfoot>
             </table>
+            </div>
         </div>
     </div>
 }

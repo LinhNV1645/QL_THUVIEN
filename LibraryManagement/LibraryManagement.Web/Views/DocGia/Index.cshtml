@@ -41,12 +41,12 @@
             <table class="table table-hover table-sm mb-0 align-middle">
                 <thead class="table-success">
                     <tr>
-                        <th class="px-3" style="width:50px">STT</th>
+                        <th class="px-3 d-none d-sm-table-cell" style="width:50px">STT</th>
                         <th>Họ tên</th>
                         <th style="width:80px">Lớp</th>
-                        <th>Email</th>
-                        <th style="width:120px">Số ĐT</th>
-                        <th style="width:110px">Ngày đăng ký</th>
+                        <th class="d-none d-lg-table-cell">Email</th>
+                        <th class="d-none d-md-table-cell" style="width:120px">Số ĐT</th>
+                        <th class="d-none d-md-table-cell" style="width:110px">Ngày đăng ký</th>
                         <th class="text-center" style="width:90px">Trạng thái</th>
                         <th class="text-center" style="width:130px">Thao tác</th>
                     </tr>
@@ -64,12 +64,12 @@
                     @foreach (var dg in Model.Items)
                     {
                         <tr>
-                            <td class="px-3 text-muted small">@(stt++)</td>
+                            <td class="px-3 text-muted small d-none d-sm-table-cell">@(stt++)</td>
                             <td class="fw-semibold">@dg.HoTen</td>
                             <td class="small">@(dg.Lop ?? "—")</td>
-                            <td class="small text-muted">@(dg.Email ?? "—")</td>
-                            <td class="small">@(dg.SoDienThoai ?? "—")</td>
-                            <td class="small">@dg.NgayDangKy.ToString("dd/MM/yyyy")</td>
+                            <td class="small text-muted d-none d-lg-table-cell">@(dg.Email ?? "—")</td>
+                            <td class="small d-none d-md-table-cell">@(dg.SoDienThoai ?? "—")</td>
+                            <td class="small d-none d-md-table-cell">@dg.NgayDangKy.ToString("dd/MM/yyyy")</td>
                             <td class="text-center">
                                 @if (dg.TrangThai == 1)
                                 {
