@@ -129,8 +129,19 @@ public class SachController : Controller
     public IActionResult QrImage(string maQR)
     {
         if (string.IsNullOrWhiteSpace(maQR)) return BadRequest();
-        var bytes = _qrService.GenerateQrBytes(maQR);
+        // Encode URL vào QR để camera điện thoại có thể mở thẳng trang sách
+        var url = $"{Request.Scheme}://{Request.Host}/Sach/Scan/{maQR}";
+        var bytes = _qrService.GenerateQrBytes(url);
         return File(bytes, "image/png");
+    }
+
+    // Trang công khai — không cần đăng nhập, hiện khi quét QR bằng điện thoại
+    [AllowAnonymous]
+    [HttpGet("/Sach/Scan/{maQR}")]
+    public async Task<IActionResult> Scan(string maQR)
+    {
+        var sach = await _sachRepo.GetByQrAsync(maQR);
+        return View(sach); // null → view hiện "Không tìm thấy sách"
     }
 
     private async Task LoadDropdownsAsync()
