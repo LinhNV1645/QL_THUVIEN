@@ -63,4 +63,62 @@ public class EmailService(IConfiguration config, ILogger<EmailService> logger) :
             throw;
         }
     }
+
+    public async Task SendNhacNhoQuaHanAsync(
+        string toEmail,
+        string tenDocGia,
+        string danhSachSach,
+        DateOnly ngayHanTra,
+        int soNgayTre,
+        decimal tienPhat)
+    {
+        var settings    = config.GetSection("EmailSettings");
+        var host        = settings["Host"]        ?? "smtp.gmail.com";
+        var port        = int.Parse(settings["Port"] ?? "587");
+        var enableSsl   = bool.Parse(settings["EnableSsl"] ?? "true");
+        var userName    = settings["UserName"]    ?? "";
+        var password    = settings["Password"]    ?? "";
+        var displayName = settings["DisplayName"] ?? "Thư viện";
+
+        var message = new MimeMessage();
+        message.From.Add(new MailboxAddress(displayName, userName));
+        message.To.Add(MailboxAddress.Parse(toEmail));
+        message.Subject = $"[KHẨN] Sách mượn đã quá hạn {soNgayTre} ngày — vui lòng trả ngay";
+
+        var tienPhatStr = tienPhat > 0 ? $"\nTiền phạt ước tính: {tienPhat:N0} đồng" : "";
+        var body = $"""
+            Xin chào {tenDocGia},
+
+            Bạn đang có sách mượn ĐÃ QUÁ HẠN {soNgayTre} ngày (hạn trả: {ngayHanTra:dd/MM/yyyy}).
+
+            Danh sách sách cần trả:
+            {danhSachSach}{tienPhatStr}
+
+            Vui lòng mang sách đến thư viện để trả NGAY HÔM NAY
+            để tránh phát sinh thêm tiền phạt.
+
+            Nếu có thắc mắc, liên hệ thư viện trường để được hỗ trợ.
+
+            Trân trọng,
+            {displayName}
+            """;
+
+        message.Body = new TextPart("plain") { Text = body };
+
+        try
+        {
+            using var client = new SmtpClient();
+            var secureOption = enableSsl ? SecureSocketOptions.StartTls : SecureSocketOptions.None;
+            await client.ConnectAsync(host, port, secureOption);
+            await client.AuthenticateAsync(userName, password);
+            await client.SendAsync(message);
+            await client.DisconnectAsync(true);
+            logger.LogInformation("Email quá hạn gửi thành công tới {Email}", toEmail);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Gửi email quá hạn thất bại tới {Email}", toEmail);
+            throw;
+        }
+    }
 }

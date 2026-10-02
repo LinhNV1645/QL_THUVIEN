@@ -12,9 +12,21 @@
             <span class="badge bg-danger ms-1">@list.Count</span>
         }
     </h4>
-    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
-        <i class="bi bi-arrow-left me-1"></i>Quay lại danh sách
-    </a>
+    <div class="d-flex gap-2">
+        @if (list.Any(x => !string.IsNullOrEmpty(x.Email)))
+        {
+            <form method="post" asp-action="GuiMailTatCaQuaHan"
+                  onsubmit="return confirm('Gửi email nhắc nhở tới TẤT CẢ @list.Count(x => !string.IsNullOrEmpty(x.Email)) độc giả có email?')">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-warning btn-sm">
+                    <i class="bi bi-envelope-exclamation me-1"></i>Gửi mail tất cả (@list.Count(x => !string.IsNullOrEmpty(x.Email)))
+                </button>
+            </form>
+        }
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Quay lại danh sách
+        </a>
+    </div>
 </div>
 
 @if (!list.Any())
@@ -88,11 +100,31 @@ else
                                 @p.TienPhatUocTinh.ToString("N0") đ
                             </td>
                             <td class="text-end pe-3">
-                                <a asp-controller="TraSach" asp-action="LapPhieu"
-                                   asp-route-maPhieuMuon="@p.MaPhieuMuon"
-                                   class="btn btn-sm btn-outline-primary" title="Trả sách">
-                                    <i class="bi bi-arrow-bar-left"></i>
-                                </a>
+                                <div class="d-flex gap-1 justify-content-end">
+                                    <a asp-controller="TraSach" asp-action="LapPhieu"
+                                       asp-route-maPhieuMuon="@p.MaPhieuMuon"
+                                       class="btn btn-sm btn-outline-primary" title="Lập phiếu trả">
+                                        <i class="bi bi-arrow-bar-left"></i>
+                                    </a>
+                                    @if (!string.IsNullOrEmpty(p.Email))
+                                    {
+                                        <form method="post" asp-action="GuiMailQuaHan" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="maPhieuMuon" value="@p.MaPhieuMuon" />
+                                            <button type="submit" class="btn btn-sm btn-outline-warning"
+                                                    title="Gửi email nhắc nhở tới @p.Email">
+                                                <i class="bi bi-envelope-exclamation"></i>
+                                            </button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <span class="btn btn-sm btn-outline-secondary disabled"
+                                              title="Không có email">
+                                            <i class="bi bi-envelope-slash"></i>
+                                        </span>
+                                    }
+                                </div>
                             </td>
                         </tr>
                         stt++;

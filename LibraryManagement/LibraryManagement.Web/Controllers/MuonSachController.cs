@@ -15,6 +15,7 @@ public class MuonSachController(
     IPhieuMuonRepository phieuMuonRepo,
     ISachRepository sachRepo,
     IDocGiaRepository docGiaRepo,
+    IEmailService emailService,
     AppDbContext db) : Controller
 {
     // GET /MuonSach
@@ -148,6 +149,74 @@ public class MuonSachController(
             soSachDangMuon = dangMuon.Sum(p => p.SoSachMuon),
             coPhieuQuaHan = dangMuon.Any(p => p.SoNgayTreHan > 0)
         });
+    }
+
+    // POST /MuonSach/GửiMailQuaHan — gửi email nhắc 1 phiếu quá hạn
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> GuiMailQuaHan(int maPhieuMuon)
+    {
+        var phieu = await phieuMuonRepo.GetByIdAsync(maPhieuMuon);
+        if (phieu == null)
+        {
+            TempData["Error"] = $"Không tìm thấy phiếu mượn #{maPhieuMuon}.";
+            return RedirectToAction(nameof(QuaHan));
+        }
+        if (string.IsNullOrWhiteSpace(phieu.Email))
+        {
+            TempData["Error"] = $"Độc giả {phieu.TenDocGia} không có địa chỉ email.";
+            return RedirectToAction(nameof(QuaHan));
+        }
+
+        var danhSachSach = string.Join("\n", phieu.DanhSachSach.Select(s => $"  • {s.TenSach}"));
+        try
+        {
+            await emailService.SendNhacNhoQuaHanAsync(
+                toEmail     : phieu.Email,
+                tenDocGia   : phieu.TenDocGia,
+                danhSachSach: danhSachSach,
+                ngayHanTra  : phieu.NgayHanTra,
+                soNgayTre   : phieu.SoNgayTreHan,
+                tienPhat    : 0);
+            TempData["Success"] = $"Đã gửi email nhắc nhở tới {phieu.Email}.";
+        }
+        catch (Exception ex)
+        {
+            TempData["Error"] = $"Gửi email thất bại: {ex.Message}";
+        }
+        return RedirectToAction(nameof(QuaHan));
+    }
+
+    // POST /MuonSach/GuiMailTatCaQuaHan — gửi email cho tất cả phiếu quá hạn có email
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> GuiMailTatCaQuaHan()
+    {
+        var list = await phieuMuonRepo.GetQuaHanAsync();
+        int sent = 0, noEmail = 0, failed = 0;
+
+        foreach (var item in list)
+        {
+            if (string.IsNullOrWhiteSpace(item.Email)) { noEmail++; continue; }
+
+            var phieu = await phieuMuonRepo.GetByIdAsync(item.MaPhieuMuon);
+            if (phieu == null) { failed++; continue; }
+
+            var danhSachSach = string.Join("\n", phieu.DanhSachSach.Select(s => $"  • {s.TenSach}"));
+            try
+            {
+                await emailService.SendNhacNhoQuaHanAsync(
+                    toEmail     : item.Email,
+                    tenDocGia   : item.TenDocGia,
+                    danhSachSach: danhSachSach,
+                    ngayHanTra  : item.NgayHanTra,
+                    soNgayTre   : item.SoNgayTre,
+                    tienPhat    : item.TienPhatUocTinh);
+                sent++;
+            }
+            catch { failed++; }
+        }
+
+        TempData["Success"] = $"Đã gửi: {sent} email. Không có email: {noEmail}. Thất bại: {failed}.";
+        return RedirectToAction(nameof(QuaHan));
     }
 
     // GET /MuonSach/LichSuDocGia?maDocGia=...  (AJAX)
