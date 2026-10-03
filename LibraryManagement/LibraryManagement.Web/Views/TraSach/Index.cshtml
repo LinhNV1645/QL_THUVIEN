@@ -4,6 +4,10 @@
     ViewData["Title"] = "Quản lý trả sách";
     var chuaThuPhat = Model.Where(p => !p.DaThuPhat && p.TienPhat > 0).ToList();
     var daThuPhat = Model.Where(p => p.DaThuPhat || p.TienPhat == 0).ToList();
+    var quaHan = ((IEnumerable<PhieuMuonQuaHanDto>?)ViewBag.DanhSachQuaHan)?.ToList() ?? [];
+
+    var tab = Context.Request.Query["tab"].ToString();
+    if (tab is not ("daThuPhat" or "quaHan")) tab = "chuaThuPhat";
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -16,7 +20,7 @@
 <!-- Tabs -->
 <ul class="nav nav-tabs mb-3" id="traSachTab">
     <li class="nav-item">
-        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#chuaThuPhat">
+        <button class="nav-link @(tab == "chuaThuPhat" ? "active" : "")" data-bs-toggle="tab" data-bs-target="#chuaThuPhat">
             Chưa thu phạt
             @if (chuaThuPhat.Any())
             {
@@ -25,15 +29,24 @@
         </button>
     </li>
     <li class="nav-item">
-        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#daThuPhat">
+        <button class="nav-link @(tab == "daThuPhat" ? "active" : "")" data-bs-toggle="tab" data-bs-target="#daThuPhat">
             Đã hoàn tất <span class="badge bg-secondary ms-1">@daThuPhat.Count</span>
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link @(tab == "quaHan" ? "active" : "")" data-bs-toggle="tab" data-bs-target="#quaHan">
+            Danh sách quá hạn
+            @if (quaHan.Any())
+            {
+                <span class="badge bg-danger ms-1">@quaHan.Count</span>
+            }
         </button>
     </li>
 </ul>
 
 <div class="tab-content">
     <!-- Tab Chưa thu phạt -->
-    <div class="tab-pane fade show active" id="chuaThuPhat">
+    <div class="tab-pane fade @(tab == "chuaThuPhat" ? "show active" : "")" id="chuaThuPhat">
         <div class="card shadow-sm">
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -114,7 +127,7 @@
     </div>
 
     <!-- Tab Đã thu phạt -->
-    <div class="tab-pane fade" id="daThuPhat">
+    <div class="tab-pane fade @(tab == "daThuPhat" ? "show active" : "")" id="daThuPhat">
         <div class="card shadow-sm">
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -173,4 +186,22 @@
             </div>
         </div>
     </div>
+
+    <!-- Tab Danh sách quá hạn -->
+    <div class="tab-pane fade @(tab == "quaHan" ? "show active" : "")" id="quaHan">
+        <partial name="_DanhSachQuaHan" model="quaHan"
+                 view-data='new ViewDataDictionary(ViewData) { ["ReturnUrl"] = Url.Action("Index", "TraSach", new { tab = "quaHan" }) }' />
+    </div>
 </div>
+
+@section Scripts {
+    <script>
+        document.querySelectorAll('#traSachTab [data-bs-toggle="tab"]').forEach(btn => {
+            btn.addEventListener('shown.bs.tab', e => {
+                const url = new URL(window.location);
+                url.searchParams.set('tab', e.target.dataset.bsTarget.substring(1));
+                history.replaceState(null, '', url);
+            });
+        });
+    </script>
+}

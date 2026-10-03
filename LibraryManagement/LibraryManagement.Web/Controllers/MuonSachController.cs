@@ -153,42 +153,43 @@ public class MuonSachController(
 
     // POST /MuonSach/GửiMailQuaHan — gửi email nhắc 1 phiếu quá hạn
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> GuiMailQuaHan(int maPhieuMuon)
+    public async Task<IActionResult> GuiMailQuaHan(int maPhieuMuon, string? returnUrl)
     {
         var phieu = await phieuMuonRepo.GetByIdAsync(maPhieuMuon);
         if (phieu == null)
         {
             TempData["Error"] = $"Không tìm thấy phiếu mượn #{maPhieuMuon}.";
-            return RedirectToAction(nameof(QuaHan));
+            return VeTrangQuaHan(returnUrl);
         }
         if (string.IsNullOrWhiteSpace(phieu.Email))
         {
             TempData["Error"] = $"Độc giả {phieu.TenDocGia} không có địa chỉ email.";
-            return RedirectToAction(nameof(QuaHan));
+            return VeTrangQuaHan(returnUrl);
         }
 
-        var danhSachSach = string.Join("\n", phieu.DanhSachSach.Select(s => $"  • {s.TenSach}"));
+        var quaHan = (await phieuMuonRepo.GetQuaHanAsync())
+            .FirstOrDefault(x => x.MaPhieuMuon == maPhieuMuon);
+        if (quaHan == null)
+        {
+            TempData["Error"] = $"Phiếu mượn #{maPhieuMuon} không ở trạng thái quá hạn.";
+            return VeTrangQuaHan(returnUrl);
+        }
+
         try
         {
-            await emailService.SendNhacNhoQuaHanAsync(
-                toEmail     : phieu.Email,
-                tenDocGia   : phieu.TenDocGia,
-                danhSachSach: danhSachSach,
-                ngayHanTra  : phieu.NgayHanTra,
-                soNgayTre   : phieu.SoNgayTreHan,
-                tienPhat    : 0);
+            await GuiMailQuaHanAsync(phieu.Email, quaHan, phieu);
             TempData["Success"] = $"Đã gửi email nhắc nhở tới {phieu.Email}.";
         }
         catch (Exception ex)
         {
             TempData["Error"] = $"Gửi email thất bại: {ex.Message}";
         }
-        return RedirectToAction(nameof(QuaHan));
+        return VeTrangQuaHan(returnUrl);
     }
 
     // POST /MuonSach/GuiMailTatCaQuaHan — gửi email cho tất cả phiếu quá hạn có email
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> GuiMailTatCaQuaHan()
+    public async Task<IActionResult> GuiMailTatCaQuaHan(string? returnUrl)
     {
         var list = await phieuMuonRepo.GetQuaHanAsync();
         int sent = 0, noEmail = 0, failed = 0;
@@ -200,24 +201,29 @@ public class MuonSachController(
             var phieu = await phieuMuonRepo.GetByIdAsync(item.MaPhieuMuon);
             if (phieu == null) { failed++; continue; }
 
-            var danhSachSach = string.Join("\n", phieu.DanhSachSach.Select(s => $"  • {s.TenSach}"));
             try
             {
-                await emailService.SendNhacNhoQuaHanAsync(
-                    toEmail     : item.Email,
-                    tenDocGia   : item.TenDocGia,
-                    danhSachSach: danhSachSach,
-                    ngayHanTra  : item.NgayHanTra,
-                    soNgayTre   : item.SoNgayTre,
-                    tienPhat    : item.TienPhatUocTinh);
+                await GuiMailQuaHanAsync(item.Email, item, phieu);
                 sent++;
             }
             catch { failed++; }
         }
 
         TempData["Success"] = $"Đã gửi: {sent} email. Không có email: {noEmail}. Thất bại: {failed}.";
-        return RedirectToAction(nameof(QuaHan));
+        return VeTrangQuaHan(returnUrl);
     }
+
+    private IActionResult VeTrangQuaHan(string? returnUrl) =>
+        Url.IsLocalUrl(returnUrl) ? LocalRedirect(returnUrl) : RedirectToAction(nameof(QuaHan));
+
+    private Task GuiMailQuaHanAsync(string toEmail, PhieuMuonQuaHanDto quaHan, PhieuMuonDetailDto phieu) =>
+        emailService.SendNhacNhoQuaHanAsync(
+            toEmail     : toEmail,
+            tenDocGia   : quaHan.TenDocGia,
+            danhSachSach: phieu.DanhSachSach.Select(s => s.TenSach),
+            ngayHanTra  : quaHan.NgayHanTra,
+            soNgayTre   : quaHan.SoNgayTre,
+            tienPhat    : quaHan.TienPhatUocTinh);
 
     // GET /MuonSach/LichSuDocGia?maDocGia=...  (AJAX)
     [HttpGet]

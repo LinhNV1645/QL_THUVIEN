@@ -10,7 +10,7 @@ namespace LibraryManagement.Infrastructure.Jobs;
 /// <summary>
 /// Hangfire job — chạy định kỳ để gửi email nhắc nhở độc giả sắp đến hạn trả sách.
 /// Đăng ký trong Program.cs: RecurringJob.AddOrUpdate&lt;NhacNhoHanTraJob&gt;(
-///     "nhac-nho-han-tra", j => j.Execute(), Cron.Daily(8));
+///     "nhac-nho-han-tra", j => j.Execute(), "0 7 * * *").
 /// </summary>
 public class NhacNhoHanTraJob(
     AppDbContext db,
@@ -23,14 +23,14 @@ public class NhacNhoHanTraJob(
         string HoTen,
         string? Email,
         string? Lop,
-        int    SoNgayConLai,
-        string DanhSachSach);
+        int    SoNgayConLai);
 
     public async Task Execute()
     {
         logger.LogInformation("NhacNhoHanTraJob bắt đầu lúc {Time}", DateTime.Now);
 
         var rows = await LayDanhSachSapDenHanAsync(soNgayTruoc: 3);
+        var sachTheoPhieu = await LaySachTheoPhieuAsync(rows.Select(r => r.MaPhieuMuon).ToList());
         int sent = 0, skipped = 0;
 
         foreach (var row in rows)
@@ -48,7 +48,7 @@ public class NhacNhoHanTraJob(
                 await email.SendNhacNhoHanTraAsync(
                     toEmail      : row.Email,
                     tenDocGia    : row.HoTen,
-                    danhSachSach : row.DanhSachSach,
+                    danhSachSach : sachTheoPhieu.GetValueOrDefault(row.MaPhieuMuon) ?? [],
                     ngayHanTra   : row.NgayHanTra,
                     soNgayConLai : row.SoNgayConLai);
                 sent++;
@@ -61,6 +61,21 @@ public class NhacNhoHanTraJob(
 
         logger.LogInformation(
             "NhacNhoHanTraJob hoàn tất — đã gửi: {Sent}, bỏ qua: {Skipped}", sent, skipped);
+    }
+
+    private async Task<Dictionary<int, List<string>>> LaySachTheoPhieuAsync(List<int> maPhieus)
+    {
+        if (maPhieus.Count == 0) return [];
+
+        var rows = await db.CTPhieuMuons
+            .AsNoTracking()
+            .Where(ct => maPhieus.Contains(ct.MaPhieuMuon))
+            .Select(ct => new { ct.MaPhieuMuon, ct.Sach.TenSach })
+            .ToListAsync();
+
+        return rows
+            .GroupBy(x => x.MaPhieuMuon)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.TenSach).ToList());
     }
 
     // ── gọi sp_LayPhieuMuonSapDenHan ────────────────────────────────────────
@@ -87,8 +102,7 @@ public class NhacNhoHanTraJob(
                 HoTen        : reader.GetString(reader.GetOrdinal("HoTen")),
                 Email        : reader["Email"] as string,
                 Lop          : reader["Lop"] as string,
-                SoNgayConLai : reader.GetInt32(reader.GetOrdinal("SoNgayConLai")),
-                DanhSachSach : reader.GetString(reader.GetOrdinal("DanhSachSach"))
+                SoNgayConLai : reader.GetInt32(reader.GetOrdinal("SoNgayConLai"))
             ));
         }
 

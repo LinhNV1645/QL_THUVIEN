@@ -18,6 +18,7 @@ public class TraSachController(
     public async Task<IActionResult> Index()
     {
         var all = await phieuTraRepo.GetAllAsync();
+        ViewBag.DanhSachQuaHan = await phieuMuonRepo.GetQuaHanAsync();
         return View(all);
     }
 
